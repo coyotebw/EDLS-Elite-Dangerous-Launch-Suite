@@ -82,10 +82,15 @@ function Write-Header {
         return (' ' * [Math]::Floor($P / 2)) + $Text + (' ' * [Math]::Ceiling($P / 2))
     }
 
+    # Spread letters with single spaces; double-space between words — matches header style
+    function SpaceOut([string]$Text) {
+        ($Text.ToUpper() -split '\s+' | ForEach-Object { $_.ToCharArray() -join ' ' }) -join '  '
+    }
+
     Write-Host "╔$('═' * $W)╗"                                                                     -ForegroundColor DarkYellow
     Write-Host "║$Blank║"                                                                             -ForegroundColor DarkYellow
     Write-Host "║$(Pad '◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆')║"     -ForegroundColor Yellow
-    Write-Host "║$(Pad 'C M D R  ·  C O Y O T E  B O N G W A T E R')║"                             -ForegroundColor DarkYellow
+    Write-Host "║$(Pad "C M D R  ·  $(SpaceOut $script:CmdrName)")║"                                 -ForegroundColor DarkYellow
     Write-Host "║$Blank║"                                                                             -ForegroundColor DarkYellow
     Write-Host "╚$('═' * $W)╝"                                                                     -ForegroundColor DarkYellow
     Write-Host ""
@@ -211,6 +216,7 @@ function Load-Settings {
     )
 
     $Defaults = [ordered]@{
+        CmdrName           = "Coyote Bongwater"
         LaunchDelaySeconds = 3
         EliteAppId         = 359320
         Apps               = $DefaultAppList
@@ -233,8 +239,9 @@ function Load-Settings {
     }
 
     # Apply scalar settings (fall back to defaults for missing keys)
-    $script:EliteAppId         = if ($null -ne $Json.EliteAppId)         { [int]$Json.EliteAppId }         else { $Defaults.EliteAppId }
-    $script:LaunchDelaySeconds = if ($null -ne $Json.LaunchDelaySeconds) { [int]$Json.LaunchDelaySeconds } else { $Defaults.LaunchDelaySeconds }
+    $script:CmdrName           = if ($Json.CmdrName)                     { $Json.CmdrName }                                                     else { $Defaults.CmdrName }
+    $script:EliteAppId         = if ($null -ne $Json.EliteAppId)         { [int]$Json.EliteAppId }                                              else { $Defaults.EliteAppId }
+    $script:LaunchDelaySeconds = if ($null -ne $Json.LaunchDelaySeconds) { [int]$Json.LaunchDelaySeconds }                                      else { $Defaults.LaunchDelaySeconds }
 
     # Rebuild $Apps from the JSON array
     $script:Apps = @()
