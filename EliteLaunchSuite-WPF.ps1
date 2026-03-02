@@ -251,19 +251,17 @@ $Dispatcher   = $Window.Dispatcher
 # Without this, any unhandled exception on the UI thread kills the process
 # with no log entry. This handler logs the full exception + stack trace so
 # the root cause can be identified, then keeps the app alive.
-$Dispatcher.UnhandledException.Add(
-    [System.Windows.Threading.DispatcherUnhandledExceptionEventHandler]{
-        param($s, $e)
-        $ts = Get-Date -Format 'HH:mm:ss'
-        Add-Content -Path $script:LogFile `
-            -Value "[$ts] [UNHANDLED] $($e.Exception.GetType().Name): $($e.Exception.Message)" `
-            -EA SilentlyContinue
-        Add-Content -Path $script:LogFile `
-            -Value $e.Exception.StackTrace `
-            -EA SilentlyContinue
-        $e.Handled = $true
-    }
-)
+$Dispatcher.Add_UnhandledException({
+    param($s, $e)
+    $ts = Get-Date -Format 'HH:mm:ss'
+    Add-Content -Path $script:LogFile `
+        -Value "[$ts] [UNHANDLED] $($e.Exception.GetType().Name): $($e.Exception.Message)" `
+        -EA SilentlyContinue
+    Add-Content -Path $script:LogFile `
+        -Value $e.Exception.StackTrace `
+        -EA SilentlyContinue
+    $e.Handled = $true
+})
 
 # ── Window icon ───────────────────────────────────────────
 $_iconPath = Join-Path $PSScriptRoot 'icon.ico'
