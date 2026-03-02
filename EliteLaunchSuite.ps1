@@ -9,7 +9,7 @@ if (-not [Environment]::Is64BitProcess) {
     Start-Process "$env:WINDIR\sysnative\WindowsPowerShell\v1.0\powershell.exe" `
         -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`"" `
         -Verb RunAs
-    exit
+    exit 0
 }
 
  # ==========================
@@ -32,7 +32,6 @@ $LaunchDelaySeconds = 3
 $LaunchedProcesses = @()
 
 #array of 3rd party tools
-#todo put back edhm-ui with new pathfinding
 $Apps = @(
     @{
         Name    = "EDMarketConnector"
@@ -88,10 +87,6 @@ function Resolve-AppPath {
 #pointless but amusing animation
 function WaitSpinner {
     param (
-        [int]$ProcessId,
-        [string]$Message
-    )
-   param (
         [int]$ProcessId,
         [string]$Message
     )
@@ -172,21 +167,24 @@ Assert-OrExit `
     ($EliteAppId -is [int]) `
     "Elite Dangerous Steam App ID is invalid."
 
-# Validate third-party tool paths (non-fatal)
+# Validate third-party tool paths (non-fatal); resolve scriptblock paths now so we
+# don't run them twice (once here, once in the launch loop).
 foreach ($App in $Apps) {
-
     $ResolvedPath = Resolve-AppPath $App.Path
-    if (-not (Test-Executable $ResolvedPath)) {
-        Write-Log "WARNING: $($App.Name) not found and will be skipped."
+    if (Test-Executable $ResolvedPath) {
+        $App.Path = $ResolvedPath
+    } else {
+        Write-Log "WARNING: $($App.Name) not found — will be skipped."
         $App.Path = $null
     }
 }
 
 Clear-Host
+Write-Host ""
 Write-Log "||                                ||"
 Write-Log "||          WELCOME CMDR          ||"
 Write-Log "||               o7               ||"
-Write-Log "`r`n`n`n`n"
+Write-Host ""
 Write-Log "Checking for Steam..."
 #find & boot steam
 if (-not (Is-Process-Running "steam")) {
@@ -206,8 +204,9 @@ $EliteStartTimeout = (Get-Date).AddSeconds(60)
 
 do {
     Start-Sleep -Seconds 2
-    $EliteProcess = Get-Process -Name "EliteDangerous64" -ErrorAction SilentlyContinue
-} until ($EliteProcess -or (Get-Date) -gt $EliteStartTimeout)
+    $EliteProcess = Get-Process -Name "EliteDangerous64" -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+} until ($EliteProcess -or ((Get-Date) -gt $EliteStartTimeout))
 
 Assert-OrExit `
     ($EliteProcess) `
@@ -218,32 +217,26 @@ Write-Log "Elite detected (PID: $($EliteProcess.Id))"
 
 #launch apps
 foreach ($App in $Apps) {
-    
+
     if (-not $App.Path) {
         continue
     }
-    
-    Write-Log "Launching $($App.Name)..."
-    
+
     if (Is-Process-Running $App.Process) {
-        Write-Log "$($App.Name) already running."
+        Write-Log "$($App.Name) already running — skipping."
         continue
     }
-    
-    $ResolvedPath = Resolve-AppPath $App.Path
 
-    if ($ResolvedPath -and (Test-Path $ResolvedPath)) {
-        Write-Log "Launching $($App.Name)..."
-        Start-Process $ResolvedPath
-
-        #add to tracked apps
+    try {
+        Write-Log "Launching $($App.Name) ($($App.Path))..."
+        $Proc = Start-Process $App.Path -PassThru -ErrorAction Stop
         $LaunchedProcesses += $App.Process
+        Write-Log "$($App.Name) started (PID: $($Proc.Id))."
+    } catch {
+        Write-Log "WARNING: Failed to launch $($App.Name): $_"
+    }
 
-        Start-Sleep -Seconds $LaunchDelaySeconds
-    }
-    else {
-        Write-Log "WARNING: Path not found for $($App.Name)"
-    }
+    Start-Sleep -Seconds $LaunchDelaySeconds
 }
 
 Write-Log "All tools launched."
