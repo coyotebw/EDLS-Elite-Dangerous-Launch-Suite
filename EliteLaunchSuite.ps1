@@ -263,6 +263,16 @@ function Load-Settings {
         $Json = $Defaults | ConvertTo-Json -Depth 5 | ConvertFrom-Json
     }
 
+    # Merge any default apps missing from the existing settings file so that
+    # new entries added in a later version automatically appear for existing installs.
+    $existingNames = @($Json.Apps | ForEach-Object { $_.Name })
+    $missing = $DefaultAppList | Where-Object { $_.Name -notin $existingNames }
+    if ($missing) {
+        $allApps = @($Json.Apps) + @($missing)
+        $Json | Add-Member -NotePropertyName Apps -NotePropertyValue $allApps -Force
+        try { $Json | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {}
+    }
+
     # Apply scalar settings (fall back to defaults for missing keys)
     $script:CmdrName           = if ($Json.CmdrName)                     { $Json.CmdrName }                                                     else { $Defaults.CmdrName }
     $script:EliteAppId         = if ($null -ne $Json.EliteAppId)         { [int]$Json.EliteAppId }                                              else { $Defaults.EliteAppId }
