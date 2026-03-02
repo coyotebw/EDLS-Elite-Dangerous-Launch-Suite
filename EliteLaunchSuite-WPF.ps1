@@ -247,6 +247,24 @@ $ShutdownBtn  = $Window.FindName('ShutdownBtn')
 $LogDocument  = $LogBox.Document
 $Dispatcher   = $Window.Dispatcher
 
+# ── Dispatcher crash guard ────────────────────────────────
+# Without this, any unhandled exception on the UI thread kills the process
+# with no log entry. This handler logs the full exception + stack trace so
+# the root cause can be identified, then keeps the app alive.
+$Dispatcher.UnhandledException.Add(
+    [System.Windows.Threading.DispatcherUnhandledExceptionEventHandler]{
+        param($s, $e)
+        $ts = Get-Date -Format 'HH:mm:ss'
+        Add-Content -Path $script:LogFile `
+            -Value "[$ts] [UNHANDLED] $($e.Exception.GetType().Name): $($e.Exception.Message)" `
+            -EA SilentlyContinue
+        Add-Content -Path $script:LogFile `
+            -Value $e.Exception.StackTrace `
+            -EA SilentlyContinue
+        $e.Handled = $true
+    }
+)
+
 # ── Window icon ───────────────────────────────────────────
 $_iconPath = Join-Path $PSScriptRoot 'icon.ico'
 if (Test-Path $_iconPath) {
@@ -258,22 +276,30 @@ if (Test-Path $_iconPath) {
 
 # ── Button hover effects ──────────────────────────────────
 $LaunchBtn.Add_MouseEnter({
-    if ($LaunchBtn.IsEnabled) {
-        $LaunchBtn.Background   = Brush '#2A2000'
-        $LaunchBtn.BorderBrush  = Brush '#FFB700'
-    }
+    try {
+        if ($LaunchBtn.IsEnabled) {
+            $LaunchBtn.Background  = Brush '#2A2000'
+            $LaunchBtn.BorderBrush = Brush '#FFB700'
+        }
+    } catch {}
 })
 $LaunchBtn.Add_MouseLeave({
-    $LaunchBtn.Background  = Brush '#1A1100'
-    $LaunchBtn.BorderBrush = Brush '#C8860A'
+    try {
+        $LaunchBtn.Background  = Brush '#1A1100'
+        $LaunchBtn.BorderBrush = Brush '#C8860A'
+    } catch {}
 })
 $ShutdownBtn.Add_MouseEnter({
-    $ShutdownBtn.Foreground   = Brush '#CC4444'
-    $ShutdownBtn.BorderBrush  = Brush '#663333'
+    try {
+        $ShutdownBtn.Foreground  = Brush '#CC4444'
+        $ShutdownBtn.BorderBrush = Brush '#663333'
+    } catch {}
 })
 $ShutdownBtn.Add_MouseLeave({
-    $ShutdownBtn.Foreground  = Brush '#555555'
-    $ShutdownBtn.BorderBrush = Brush '#2A2A2A'
+    try {
+        $ShutdownBtn.Foreground  = Brush '#555555'
+        $ShutdownBtn.BorderBrush = Brush '#2A2A2A'
+    } catch {}
 })
 
 # ── Status row management ─────────────────────────────────
@@ -627,36 +653,44 @@ $Window.Add_Closed({
 
 # ── Auto-start checkbox ───────────────────────────────────
 $AutoStartChk.Add_Checked({
-    $AutoStartChk.Foreground = Brush '#FFB700'
-    Save-AutoStart $true
+    try {
+        $AutoStartChk.Foreground = Brush '#FFB700'
+        Save-AutoStart $true
+    } catch { Write-UILog "Auto-start save error: $_" -Level Warning }
 })
 $AutoStartChk.Add_Unchecked({
-    $AutoStartChk.Foreground = Brush '#3A3A3A'
-    Save-AutoStart $false
+    try {
+        $AutoStartChk.Foreground = Brush '#3A3A3A'
+        Save-AutoStart $false
+    } catch { Write-UILog "Auto-start save error: $_" -Level Warning }
 })
 
 # ── Shutdown button ───────────────────────────────────────
 $ShutdownBtn.Add_Click({
-    if (-not $script:Apps) { Load-Settings }
-    $anyFound = $false
-    foreach ($App in $script:Apps) {
-        $Running = Get-Process -Name $App.Process -EA SilentlyContinue
-        if ($Running) {
-            $anyFound = $true
-            Write-UILog "Stopping $($App.Name)..." -Level Warning
-            $Running | Stop-Process -Force -EA SilentlyContinue
-            $row = $script:StatusRows[$App.Name]
-            if ($row) {
-                $row.Dot.Fill           = Brush '#555555'
-                $row.StateTB.Text       = 'Closed'
-                $row.StateTB.Foreground = Brush '#555555'
+    try {
+        if (-not $script:Apps) { Load-Settings }
+        $anyFound = $false
+        foreach ($App in $script:Apps) {
+            $Running = Get-Process -Name $App.Process -EA SilentlyContinue
+            if ($Running) {
+                $anyFound = $true
+                Write-UILog "Stopping $($App.Name)..." -Level Warning
+                $Running | Stop-Process -Force -EA SilentlyContinue
+                $row = $script:StatusRows[$App.Name]
+                if ($row) {
+                    $row.Dot.Fill           = Brush '#555555'
+                    $row.StateTB.Text       = 'Closed'
+                    $row.StateTB.Foreground = Brush '#555555'
+                }
             }
         }
-    }
-    if ($anyFound) {
-        Write-UILog 'Third-party tools shut down.' -Level Success
-    } else {
-        Write-UILog 'No tools running.' -Level Dim
+        if ($anyFound) {
+            Write-UILog 'Third-party tools shut down.' -Level Success
+        } else {
+            Write-UILog 'No tools running.' -Level Dim
+        }
+    } catch {
+        Write-UILog "Shutdown error: $_" -Level Error
     }
 })
 
@@ -853,9 +887,15 @@ if ($script:AutoStart) { $AutoStartChk.Foreground = Brush '#FFB700' }
 $Window.Add_Loaded({
     if ($AutoStartChk.IsChecked) {
         $Dispatcher.BeginInvoke([Action]{
-            $LaunchBtn.RaiseEvent(
-                [System.Windows.RoutedEventArgs]::new(
-                    [System.Windows.Controls.Button]::ClickEvent))
+            try {
+                $LaunchBtn.RaiseEvent(
+                    [System.Windows.RoutedEventArgs]::new(
+                        [System.Windows.Controls.Button]::ClickEvent))
+            } catch {
+                Add-Content -Path $script:LogFile `
+                    -Value "[$(Get-Date -Format 'HH:mm:ss')] [ERROR] Auto-start trigger failed: $_" `
+                    -EA SilentlyContinue
+            }
         })
     }
 })
