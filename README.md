@@ -33,11 +33,41 @@ A Windows-based launcher utility for **Elite: Dangerous** that starts the game a
 
 ## Installation
 
-1. **Compile** `EliteLaunchSuite.ps1` to an `.exe` using [PSEBuilder by durgesh](https://github.com/durgesh0505/PSEBuilder).
-   Compilation is required — running the raw `.ps1` may not work correctly with WPF.
-2. Place the compiled `.exe` and `icon.ico` in the same directory.
-3. Run the `.exe`. On first launch, a default `settings.json` is created automatically.
+### First-time setup (after cloning)
+
+1. **Clone** the repository, then open PowerShell in the repo root.
+
+2. **Run the one-time setup script** to configure git and build the `.exe`:
+
+   ```powershell
+   .\Setup.ps1
+   ```
+
+   This script sets `git core.hooksPath` to `.githooks/` so the post-merge hook is active,
+   then offers to run `Build.ps1` immediately to produce `EliteLaunchSuite.exe`.
+
+3. **Run** `EliteLaunchSuite.exe`. On first launch, a default `settings.json` is created automatically.
+
 4. Open **Settings** to adjust companion app paths if any are installed in non-standard locations.
+
+### Building manually
+
+To rebuild the `.exe` at any time:
+
+```powershell
+.\Build.ps1
+```
+
+This requires PowerShell 5.1+ and will automatically install the
+[ps2exe](https://github.com/MScholtes/PS2EXE) module on first run if it isn't already present.
+
+### Automatic rebuild on pull
+
+After running `Setup.ps1` once, every `git pull` — including pulls via **GitHub Desktop** —
+automatically recompiles the `.exe` via the `.githooks/post-merge` hook. No manual build step needed.
+
+> **Note**: The compiled `.exe` is excluded from version control via `.gitignore`.
+> Each developer builds locally from source.
 
 ---
 
@@ -113,4 +143,4 @@ Paths are resolved using standard `%ProgramFiles%` / `%ProgramFiles(x86)%` varia
 ## Notes
 
 - If a companion app is installed in a non-standard location, update its path in Settings. A missing path will be logged and skipped — it will not cause a crash.
-- The launcher must be compiled to an `.exe` via **PSEBuilder**: https://github.com/durgesh0505/PSEBuilder
+- The launcher is compiled to an `.exe` via **ps2exe** (see `Build.ps1`). No external GUI tool is required.

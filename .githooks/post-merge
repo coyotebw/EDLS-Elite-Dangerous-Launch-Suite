@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# post-merge — runs after every successful git pull/merge
+# Automatically rebuilds EliteLaunchSuite.exe from the updated source.
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+BUILD_SCRIPT="$REPO_ROOT/Build.ps1"
+
+echo ""
+echo "=== post-merge hook: rebuilding EliteLaunchSuite.exe ==="
+echo ""
+
+# Detect powershell.exe (Windows native) or pwsh (PowerShell Core)
+if command -v powershell.exe &>/dev/null; then
+    PS_CMD="powershell.exe"
+elif command -v pwsh &>/dev/null; then
+    PS_CMD="pwsh"
+else
+    echo "ERROR: PowerShell not found on PATH. Please run Build.ps1 manually." >&2
+    exit 1
+fi
+
+"$PS_CMD" -ExecutionPolicy Bypass -NoProfile -File "$BUILD_SCRIPT"
+exit $?
