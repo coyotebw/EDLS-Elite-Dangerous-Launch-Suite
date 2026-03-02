@@ -1,6 +1,6 @@
 # EDLaunchSuite
 
-A Windows-based launcher utility for **Elite: Dangerous** that starts the game and all your companion tools in one click — and automatically shuts them down when you're done flying.
+A Windows-based launcher utility for **Elite: Dangerous** that starts the game and all your companion tools in one click — and automatically shuts them down when you're done.
 
 ---
 
