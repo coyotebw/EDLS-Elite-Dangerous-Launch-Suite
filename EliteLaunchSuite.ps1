@@ -161,7 +161,11 @@ function WaitSpinner {
     }
 
     $TotalElapsed = (Get-Date) - $StartTime
-    $FinalTime    = "{0:hh\:mm\:ss}" -f $TotalElapsed
+    $FinalTime    = if ($TotalElapsed.TotalHours -ge 1) {
+        "{0:hh\:mm\:ss}" -f $TotalElapsed
+    } else {
+        "{0:mm\:ss}" -f $TotalElapsed
+    }
     Write-Host "`r  $Message ✔  [$FinalTime]   " -ForegroundColor Yellow
 }
 
@@ -261,6 +265,16 @@ function Load-Settings {
     } catch {
         Write-Log "Could not read settings file — using defaults. ($_)" -Level Warning
         $Json = $Defaults | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+    }
+
+    # Merge any default apps missing from the existing settings file so that
+    # new entries added in a later version automatically appear for existing installs.
+    $existingNames = @($Json.Apps | ForEach-Object { $_.Name })
+    $missing = $DefaultAppList | Where-Object { $_.Name -notin $existingNames }
+    if ($missing) {
+        $allApps = @($Json.Apps) + @($missing)
+        $Json | Add-Member -NotePropertyName Apps -NotePropertyValue $allApps -Force
+        try { $Json | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {}
     }
 
     # Apply scalar settings (fall back to defaults for missing keys)
@@ -388,6 +402,7 @@ foreach ($App in $Apps) {
 
     if (Is-Process-Running $App.Process) {
         Write-Log "$($App.Name) already running — skipping." -Level Dim
+        $LaunchedProcesses += $App.Process
         continue
     }
 

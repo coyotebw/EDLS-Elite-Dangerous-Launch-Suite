@@ -88,6 +88,16 @@ function Load-Settings {
     try   { $J = Get-Content $script:SettingsFile -Raw -EA Stop | ConvertFrom-Json -EA Stop }
     catch { $J = $Defaults | ConvertTo-Json -Depth 5 | ConvertFrom-Json }
 
+    # Merge any default apps missing from the existing settings file so that
+    # new entries added in a later version automatically appear for existing installs.
+    $existingNames = @($J.Apps | ForEach-Object { $_.Name })
+    $missing = $DefaultApps | Where-Object { $_.Name -notin $existingNames }
+    if ($missing) {
+        $allApps = @($J.Apps) + @($missing)
+        $J | Add-Member -NotePropertyName Apps -NotePropertyValue $allApps -Force
+        try { $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {}
+    }
+
     $script:CmdrName           = if ($J.CmdrName)                     { $J.CmdrName }                else { $Defaults.CmdrName }
     $script:EliteAppId         = if ($null -ne $J.EliteAppId)         { [int]$J.EliteAppId }         else { $Defaults.EliteAppId }
     $script:LaunchDelaySeconds = if ($null -ne $J.LaunchDelaySeconds) { [int]$J.LaunchDelaySeconds } else { $Defaults.LaunchDelaySeconds }
@@ -284,8 +294,10 @@ $LaunchBtn.Add_MouseEnter({
 })
 $LaunchBtn.Add_MouseLeave({
     try {
-        $LaunchBtn.Background  = Brush '#1A1100'
-        $LaunchBtn.BorderBrush = Brush '#C8860A'
+        if ($LaunchBtn.IsEnabled) {
+            $LaunchBtn.Background  = Brush '#1A1100'
+            $LaunchBtn.BorderBrush = Brush '#C8860A'
+        }
     } catch {}
 })
 $ShutdownBtn.Add_MouseEnter({
@@ -477,7 +489,7 @@ $LaunchScript = {
             $App.Path = $R
         } else {
             UiLog "$($App.Name) not found — will be skipped." -Lvl Warning
-            UiStatus $App.Name 'Not found' '#444444'
+            UiStatus $App.Name 'Not found' '#CC4444'
             $App.Path = $null
         }
     }
@@ -525,14 +537,15 @@ $LaunchScript = {
             if (-not $App.Path) { continue }
             if (Get-Process -Name $App.Process -EA SilentlyContinue) {
                 UiLog "$($App.Name) already running — skipping." -Lvl Dim
-                $Launched += $App.Process
+                $Launched += @{ Name = $App.Name; Process = $App.Process }
                 UiStatus $App.Name 'Online' '#44CC44'
                 continue
             }
             try {
                 UiLog "Launching $($App.Name)..."
+                UiStatus $App.Name 'Launching…' '#C8860A'
                 $P = Start-Process $App.Path -PassThru -EA Stop
-                $Launched += $App.Process
+                $Launched += @{ Name = $App.Name; Process = $App.Process }
                 UiStatus $App.Name 'Online' '#44CC44'
                 UiLog "$($App.Name) online. (PID: $($P.Id))" -Lvl Success
             } catch {
@@ -554,12 +567,12 @@ $LaunchScript = {
         UiLog 'Elite: Dangerous offline.'
         UiLog 'Closing third-party tools...'
 
-        foreach ($PN in $Launched) {
-            $Running = Get-Process -Name $PN -EA SilentlyContinue
+        foreach ($LA in $Launched) {
+            $Running = Get-Process -Name $LA.Process -EA SilentlyContinue
             if ($Running) {
-                UiLog "Stopping $PN..."
+                UiLog "Stopping $($LA.Name)..."
                 $Running | Stop-Process -Force
-                UiStatus $PN 'Closed' '#555555'
+                UiStatus $LA.Name 'Closed' '#555555'
             }
         }
 
@@ -859,6 +872,7 @@ $SettingsBtn.Add_Click({
                 CmdrName           = $CmdrBox.Text
                 LaunchDelaySeconds = [int]$DelayBox.Text
                 EliteAppId         = [int]$AppIdBox.Text
+                AutoStart          = $script:AutoStart
                 Apps               = $NewApps
             } | ConvertTo-Json -Depth 5 |
                 Set-Content $script:SettingsFile -Encoding UTF8
