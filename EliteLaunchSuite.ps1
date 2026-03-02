@@ -19,49 +19,15 @@ if (-not [Environment]::Is64BitProcess) {
 #window name
 $Host.UI.RawUI.WindowTitle = "Elite: Dangerous | One-click launch"
 
-#locate elite thru steam
-$EliteAppId = 359320
-
-#pathfinding black magic
-$LocalAppData    = $env:LOCALAPPDATA
-$ProgramFilesX86 = ${env:ProgramFiles(x86)}
-
-$LaunchDelaySeconds = 3
+#persistent data directory — safe for both .ps1 and compiled .exe contexts
+$DataDir      = Join-Path $env:LOCALAPPDATA "EDLaunchSuite"
+$LogFile      = Join-Path $DataDir "launcher.log"
+$SettingsFile = Join-Path $DataDir "settings.json"
 
 #array to track & close all apps on game exit
 $LaunchedProcesses = @()
 
-#array of 3rd party tools
-$Apps = @(
-    @{
-        Name    = "EDMarketConnector"
-        Process = "EDMarketConnector"
-        Path    = Join-Path $ProgramFilesX86 "EDMarketConnector\EDMarketConnector.exe"
-    },
-    @{
-        Name    = "SrvSurvey"
-        Process = "SrvSurvey"
-        Path    = {
-            Get-ChildItem `
-                -Path (Join-Path $LocalAppData "Apps\2.0") `
-                -Filter "SrvSurvey.exe" `
-                -Recurse `
-                -ErrorAction SilentlyContinue |
-            Select-Object -First 1 -ExpandProperty FullName
-        }
-    },
-    @{
-        Name    = "OdysseyMaterialsHelper"
-        Process = "Elite Dangerous Odyssey Materials Helper"
-        Path    = Join-Path $LocalAppData `
-            "Elite Dangerous Odyssey Materials Helper Launcher\program\Elite Dangerous Odyssey Materials Helper.exe"
-    },
-    @{
-        Name    = "EDCoPilot"
-        Process = "EDCoPilot"
-        Path    = "C:\EDCoPilot\EDCoPilot.exe"
-    }
-)
+# $EliteAppId, $LaunchDelaySeconds, and $Apps are populated by Load-Settings below
 
 
  # ===============================
@@ -70,7 +36,11 @@ $Apps = @(
 
 function Write-Log {
     param ($Message)
-    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $Message"
+    $Line = "[$(Get-Date -Format 'HH:mm:ss')] $Message"
+    Write-Host $Line
+    if ($script:LogFile) {
+        Add-Content -Path $script:LogFile -Value $Line -ErrorAction SilentlyContinue
+    }
 }
 
 function Is-Process-Running {
@@ -149,12 +119,112 @@ function Assert-OrExit {
     }
 }
 
+function Load-Settings {
+    # Default app list written to settings.json on first run.
+    # Paths use %VARIABLE% syntax so they're readable and portable across accounts.
+    $DefaultAppList = @(
+        [ordered]@{
+            Name    = "EDMarketConnector"
+            Process = "EDMarketConnector"
+            Path    = '%ProgramFiles(x86)%\EDMarketConnector\EDMarketConnector.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = "SrvSurvey"
+            Process = "SrvSurvey"
+            Path    = $null   # null = auto-discover via ClickOnce Apps\2.0 directory
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = "OdysseyMaterialsHelper"
+            Process = "Elite Dangerous Odyssey Materials Helper"
+            Path    = '%LOCALAPPDATA%\Elite Dangerous Odyssey Materials Helper Launcher\program\Elite Dangerous Odyssey Materials Helper.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = "EDCoPilot"
+            Process = "EDCoPilot"
+            Path    = 'C:\EDCoPilot\EDCoPilot.exe'
+            Enabled = $true
+        }
+    )
+
+    $Defaults = [ordered]@{
+        LaunchDelaySeconds = 3
+        EliteAppId         = 359320
+        Apps               = $DefaultAppList
+    }
+
+    # Create settings file with defaults on first run
+    if (-not (Test-Path $script:SettingsFile)) {
+        $Defaults | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8
+        Write-Log "Settings file created: $($script:SettingsFile)"
+        Write-Log "Edit it to customise paths, delays, and which tools to launch."
+    }
+
+    # Load and parse settings
+    try {
+        $Json = Get-Content $script:SettingsFile -Raw -ErrorAction Stop |
+            ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        Write-Log "WARNING: Could not read settings file — using defaults. ($_)"
+        $Json = $Defaults | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+    }
+
+    # Apply scalar settings (fall back to defaults for missing keys)
+    $script:EliteAppId         = if ($null -ne $Json.EliteAppId)         { [int]$Json.EliteAppId }         else { $Defaults.EliteAppId }
+    $script:LaunchDelaySeconds = if ($null -ne $Json.LaunchDelaySeconds) { [int]$Json.LaunchDelaySeconds } else { $Defaults.LaunchDelaySeconds }
+
+    # Rebuild $Apps from the JSON array
+    $script:Apps = @()
+    foreach ($Entry in $Json.Apps) {
+
+        if (-not $Entry.Enabled) { continue }
+
+        if (-not $Entry.Name -or -not $Entry.Process) {
+            Write-Log "WARNING: Skipping malformed entry in settings.json (missing Name or Process)."
+            continue
+        }
+
+        $AppPath = if ($Entry.Path) {
+            # Expand any %VARIABLE% placeholders in the stored path
+            [System.Environment]::ExpandEnvironmentVariables($Entry.Path)
+        } elseif ($Entry.Name -eq "SrvSurvey") {
+            # Null path for SrvSurvey triggers auto-discovery in its ClickOnce directory
+            {
+                Get-ChildItem `
+                    -Path (Join-Path $env:LOCALAPPDATA "Apps\2.0") `
+                    -Filter "SrvSurvey.exe" `
+                    -Recurse `
+                    -ErrorAction SilentlyContinue |
+                Select-Object -First 1 -ExpandProperty FullName
+            }
+        } else {
+            Write-Log "WARNING: $($Entry.Name) has no path in settings and no auto-discovery — will be skipped."
+            $null
+        }
+
+        $script:Apps += @{
+            Name    = $Entry.Name
+            Process = $Entry.Process
+            Path    = $AppPath
+        }
+    }
+}
+
 
  # ===============================
  # MAIN ||||||||||||||||||||||||||
  # ===============================
 
-#error catching
+#create data directory and open log for this session
+New-Item -ItemType Directory -Path $DataDir -Force | Out-Null
+Add-Content -Path $LogFile -Value "" -ErrorAction SilentlyContinue
+Add-Content -Path $LogFile -Value "=== Session started $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" -ErrorAction SilentlyContinue
+
+#load settings from %LOCALAPPDATA%\EDLaunchSuite\settings.json
+Load-Settings
+
 Write-Log "Running preflight checks..."
 
 # Steam must exist
@@ -257,5 +327,6 @@ foreach ($ProcessName in $LaunchedProcesses) {
 }
 
 Write-Log "Launcher shutting down. Farewell, CMDR. o7"
+Add-Content -Path $LogFile -Value "=== Session ended $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 3
 exit 0
