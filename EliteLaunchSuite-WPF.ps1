@@ -271,6 +271,7 @@ function Write-UILog { param($Message, [string]$Level = 'Info')
         $r.Foreground = [System.Windows.Media.SolidColorBrush]`
             [System.Windows.Media.ColorConverter]::ConvertFromString($c)
         $p.Inlines.Add($r)
+        if ($doc.Blocks.Count -gt 500) { $doc.Blocks.Remove($doc.Blocks.FirstBlock) }
         $doc.Blocks.Add($p)
         $box.ScrollToEnd()
     })
@@ -283,10 +284,20 @@ $SharedState = [hashtable]::Synchronized(@{ EliteStartTime = $null })
 $ElapsedTimer = [System.Windows.Threading.DispatcherTimer]::new()
 $ElapsedTimer.Interval = [TimeSpan]::FromSeconds(1)
 $ElapsedTimer.Add_Tick({
-    $t = $SharedState['EliteStartTime']
-    if ($t) {
-        $elapsed = [DateTime]::Now - $t
-        $script:StatusRows['Elite'].TimerTB.Text = '▸ {0:hh\:mm\:ss}' -f $elapsed
+    try {
+        $t = $SharedState['EliteStartTime']
+        if ($t) {
+            $elapsed = [DateTime]::Now - $t
+            $row = $script:StatusRows['Elite']
+            if ($row -and $row.TimerTB) {
+                $row.TimerTB.Text = '▸ {0:hh\:mm\:ss}' -f $elapsed
+            }
+        }
+    } catch {
+        # Swallow: a tick exception must never reach the WPF dispatcher unhandled.
+        Add-Content -Path $script:LogFile `
+            -Value "[$(Get-Date -Format 'HH:mm:ss')] [WARN] ElapsedTimer tick error: $_" `
+            -EA SilentlyContinue
     }
 })
 
@@ -317,7 +328,10 @@ $LaunchScript = {
             $p.Margin = [System.Windows.Thickness]::new(0)
             $r = [System.Windows.Documents.Run]::new($l)
             $r.Foreground = RsBrush $c
-            $p.Inlines.Add($r); $d.Blocks.Add($p); $b.ScrollToEnd()
+            $p.Inlines.Add($r)
+            if ($d.Blocks.Count -gt 500) { $d.Blocks.Remove($d.Blocks.FirstBlock) }
+            $d.Blocks.Add($p)
+            $b.ScrollToEnd()
         })
     }
 
@@ -401,59 +415,74 @@ $LaunchScript = {
     $SharedState['EliteStartTime'] = [DateTime]::Now
     $Dispatcher.Invoke([Action]{ $ElapsedTimer.Start() })
 
-    # ── Launch tools ───────────────────────────────────────
-    $Launched = @()
-    foreach ($App in $Apps) {
-        if (-not $App.Path) { continue }
-        if (Get-Process -Name $App.Process -EA SilentlyContinue) {
-            UiLog "$($App.Name) already running — skipping." -Lvl Dim
-            UiStatus $App.Name 'Already running' '#555555'
-            continue
+    try {
+        # ── Launch tools ───────────────────────────────────────
+        $Launched = @()
+        foreach ($App in $Apps) {
+            if (-not $App.Path) { continue }
+            if (Get-Process -Name $App.Process -EA SilentlyContinue) {
+                UiLog "$($App.Name) already running — skipping." -Lvl Dim
+                UiStatus $App.Name 'Already running' '#555555'
+                continue
+            }
+            try {
+                UiLog "Launching $($App.Name)..."
+                $P = Start-Process $App.Path -PassThru -EA Stop
+                $Launched += $App.Process
+                UiStatus $App.Name 'Launched' '#FFB700'
+                UiLog "$($App.Name) online. (PID: $($P.Id))" -Lvl Success
+            } catch {
+                UiLog "Failed to launch $($App.Name): $_" -Lvl Warning
+                UiStatus $App.Name 'Failed' '#CC4444'
+            }
+            Start-Sleep -Seconds $LaunchDelaySeconds
         }
+        UiLog 'All systems nominal.' -Lvl Success
+
+        # ── Monitor ────────────────────────────────────────────
+        UiLog 'Monitoring Elite: Dangerous...' -Lvl Dim
+        while (Get-Process -Id $EP.Id -EA SilentlyContinue) {
+            Start-Sleep -Seconds 2
+        }
+
+        # ── Shutdown ───────────────────────────────────────────
+        UiStatus 'Elite' 'Offline' '#555555' -ClearTimer $true
+        UiLog 'Elite: Dangerous offline.'
+        UiLog 'Closing third-party tools...'
+
+        foreach ($PN in $Launched) {
+            $Running = Get-Process -Name $PN -EA SilentlyContinue
+            if ($Running) {
+                UiLog "Stopping $PN..."
+                $Running | Stop-Process -Force
+                UiStatus $PN 'Closed' '#555555'
+            }
+        }
+
+        UiLog 'Farewell, CMDR. o7' -Lvl Success
+        Add-Content -Path $LogFile `
+            -Value "=== Session ended $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" `
+            -EA SilentlyContinue
+
+    } catch {
+        $ErrMsg = $_.ToString()
+        UiLog "Unexpected error: $ErrMsg" -Lvl Error
+        Add-Content -Path $LogFile `
+            -Value "=== Session ended with error $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'): $ErrMsg ===" `
+            -EA SilentlyContinue
+
+    } finally {
+        # Always stop the timer and re-enable the button — idempotent and safe to
+        # call twice on the normal path (stopped timer is a no-op in WPF).
         try {
-            UiLog "Launching $($App.Name)..."
-            $P = Start-Process $App.Path -PassThru -EA Stop
-            $Launched += $App.Process
-            UiStatus $App.Name 'Launched' '#FFB700'
-            UiLog "$($App.Name) online. (PID: $($P.Id))" -Lvl Success
-        } catch {
-            UiLog "Failed to launch $($App.Name): $_" -Lvl Warning
-            UiStatus $App.Name 'Failed' '#CC4444'
-        }
-        Start-Sleep -Seconds $LaunchDelaySeconds
+            $Dispatcher.Invoke([Action]{
+                $ElapsedTimer.Stop()
+                $LaunchBtn.IsEnabled = $true
+                $LaunchBtn.Content   = '[ LAUNCH ]'
+            })
+        } catch {}
+        $SharedState['EliteStartTime'] = $null
     }
-    UiLog 'All systems nominal.' -Lvl Success
-
-    # ── Monitor ────────────────────────────────────────────
-    UiLog 'Monitoring Elite: Dangerous...' -Lvl Dim
-    while (Get-Process -Id $EP.Id -EA SilentlyContinue) {
-        Start-Sleep -Seconds 2
-    }
-
-    # ── Shutdown ───────────────────────────────────────────
-    $Dispatcher.Invoke([Action]{ $ElapsedTimer.Stop() })
-    $SharedState['EliteStartTime'] = $null
-    UiStatus 'Elite' 'Offline' '#555555' -ClearTimer $true
-    UiLog 'Elite: Dangerous offline.'
-    UiLog 'Closing third-party tools...'
-
-    foreach ($PN in $Launched) {
-        $Running = Get-Process -Name $PN -EA SilentlyContinue
-        if ($Running) {
-            UiLog "Stopping $PN..."
-            $Running | Stop-Process -Force
-            UiStatus $PN 'Closed' '#555555'
-        }
-    }
-
-    UiLog 'Farewell, CMDR. o7' -Lvl Success
-    Add-Content -Path $LogFile `
-        -Value "=== Session ended $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" `
-        -EA SilentlyContinue
-    $Dispatcher.Invoke([Action]{
-        $LaunchBtn.IsEnabled = $true
-        $LaunchBtn.Content   = '[ LAUNCH ]'
-    })
 }
 
 # ── Launch button ─────────────────────────────────────────
@@ -484,13 +513,38 @@ $LaunchBtn.Add_Click({
                 $Pair[0], $Pair[1], ''))
     }
 
-    $RS = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($ISS)
-    $RS.ApartmentState = 'STA'
-    $RS.Open()
-    $PS = [System.Management.Automation.PowerShell]::Create()
-    $PS.Runspace = $RS
-    $PS.AddScript($LaunchScript) | Out-Null
-    $PS.BeginInvoke() | Out-Null
+    # Dispose any previous runspace/pipeline before creating a new one.
+    if ($script:LaunchPS) {
+        try { $script:LaunchPS.Stop()    } catch {}
+        try { $script:LaunchPS.Dispose() } catch {}
+        $script:LaunchPS = $null
+    }
+    if ($script:LaunchRS) {
+        try { $script:LaunchRS.Close()   } catch {}
+        try { $script:LaunchRS.Dispose() } catch {}
+        $script:LaunchRS = $null
+    }
+
+    $script:LaunchRS = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($ISS)
+    $script:LaunchRS.ApartmentState = 'STA'
+    $script:LaunchRS.Open()
+    $script:LaunchPS = [System.Management.Automation.PowerShell]::Create()
+    $script:LaunchPS.Runspace = $script:LaunchRS
+    $script:LaunchPS.AddScript($LaunchScript) | Out-Null
+    $script:LaunchPS.BeginInvoke() | Out-Null
+})
+
+# ── Cleanup on window close ───────────────────────────────
+$Window.Add_Closed({
+    $ElapsedTimer.Stop()
+    if ($script:LaunchPS) {
+        try { $script:LaunchPS.Stop()    } catch {}
+        try { $script:LaunchPS.Dispose() } catch {}
+    }
+    if ($script:LaunchRS) {
+        try { $script:LaunchRS.Close()   } catch {}
+        try { $script:LaunchRS.Dispose() } catch {}
+    }
 })
 
 # ── Settings button ───────────────────────────────────────
