@@ -1,2 +1,116 @@
-Launches the game, EDMC, Odyssey materials helper, SrvSurvey, EDHM-UI, opentrack, and EDCoPilot in one go. must be compiled to exe with PSEBuilder by durgesh (https://github.com/durgesh0505/PSEBuilder). includes ability to add programs of your own choosing to the clowncar.
-**NOTE that while filepaths are generalized as best as I can, if you put the third party apps in weird places it may not find them. won't cause a crash, though.
+# EDLaunchSuite
+
+A Windows-based launcher utility for **Elite: Dangerous** that starts the game and all your companion tools in one click — and automatically shuts them down when you're done flying.
+
+---
+
+## Features
+
+- One-click launch of Elite: Dangerous via Steam plus up to N companion apps
+- Configurable delay between each app launch
+- Real-time status indicators showing which apps are running
+- Timestamped activity log (UI + file)
+- Automatically closes companion apps when Elite: Dangerous exits
+- Manual **Shutdown** button to kill companion apps at any time
+- Elapsed session timer
+- Auto-start mode — launches everything when EDLaunchSuite itself opens
+- Settings dialog to add, remove, enable/disable apps and adjust options
+- Settings and logs persist in `%LOCALAPPDATA%\EDLaunchSuite\`
+
+---
+
+## Requirements
+
+| Requirement | Details |
+|---|---|
+| OS | Windows (64-bit) |
+| PowerShell | 5.1 or later |
+| .NET Framework | 3.0+ (WPF) |
+| Steam | Must be installed; Elite: Dangerous owned and installed |
+| Elite: Dangerous Steam App ID | 359320 (default) |
+
+---
+
+## Installation
+
+1. **Compile** `EliteLaunchSuite.ps1` to an `.exe` using [PSEBuilder by durgesh](https://github.com/durgesh0505/PSEBuilder).
+   Compilation is required — running the raw `.ps1` may not work correctly with WPF.
+2. Place the compiled `.exe` and `icon.ico` in the same directory.
+3. Run the `.exe`. On first launch, a default `settings.json` is created automatically.
+4. Open **Settings** to adjust companion app paths if any are installed in non-standard locations.
+
+---
+
+## Configuration
+
+Settings are stored at:
+
+```
+%LOCALAPPDATA%\EDLaunchSuite\settings.json
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `CmdrName` | string | Your commander name, shown in the title bar |
+| `LaunchDelaySeconds` | integer | Seconds to wait between launching each companion app |
+| `EliteAppId` | integer | Steam App ID for Elite: Dangerous (default: `359320`) |
+| `AutoStart` | boolean | Automatically trigger the launch sequence on startup |
+| `Apps` | array | List of companion app entries (see below) |
+
+### App entry fields
+
+```json
+{
+  "Name":    "EDMarketConnector",
+  "Process": "EDMarketConnector",
+  "Path":    "%ProgramFiles(x86)%\\EDMarketConnector\\EDMarketConnector.exe",
+  "Enabled": true
+}
+```
+
+- `Name` — display name shown in the UI
+- `Process` — process name used to detect if the app is already running
+- `Path` — full path to the executable; supports `%ENVIRONMENT_VARIABLE%` expansion
+- `Enabled` — set to `false` to skip this app without removing it
+
+---
+
+## Default Companion Apps
+
+| Name | Default Process |
+|---|---|
+| EDMarketConnector | `EDMarketConnector` |
+| SrvSurvey | `SrvSurvey` |
+| Elite Dangerous Odyssey Materials Helper | `EdMaterialsHelper` |
+| EDCoPilot | `EDCoPilot` |
+| EDHM_UI | `EDHM_UI` |
+| opentrack | `opentrack` |
+
+Paths are resolved using standard `%ProgramFiles%` / `%ProgramFiles(x86)%` variables. If an app is installed elsewhere, update its path in the Settings dialog.
+
+---
+
+## Usage
+
+| Control | Action |
+|---|---|
+| **LAUNCH** | Verifies paths, starts Steam if needed, launches Elite: Dangerous, then launches enabled companion apps with the configured delay |
+| **SHUTDOWN** | Force-closes all companion apps (does not close Elite: Dangerous) |
+| **Settings** | Opens the configuration dialog |
+| **auto-start** checkbox | When checked, the launch sequence fires automatically each time EDLaunchSuite opens |
+
+---
+
+## File Locations
+
+| File | Path |
+|---|---|
+| Settings | `%LOCALAPPDATA%\EDLaunchSuite\settings.json` |
+| Log | `%LOCALAPPDATA%\EDLaunchSuite\launcher.log` |
+
+---
+
+## Notes
+
+- If a companion app is installed in a non-standard location, update its path in Settings. A missing path will be logged and skipped — it will not cause a crash.
+- The launcher must be compiled to an `.exe` via **PSEBuilder**: https://github.com/durgesh0505/PSEBuilder
