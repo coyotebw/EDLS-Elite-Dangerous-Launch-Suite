@@ -139,11 +139,11 @@ function Format-CmdrLine { param([string]$Name)
     Title="Elite: Dangerous | Launch Suite"
     Background="#0D0D0D"
     FontFamily="Consolas"
-    Width="740" Height="610"
+    Width="1295" Height="1070"
     ResizeMode="CanMinimize"
     WindowStartupLocation="CenterScreen">
 
-  <Grid Margin="12,10,12,10">
+  <Grid Margin="21,18,21,18">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
@@ -153,80 +153,81 @@ function Format-CmdrLine { param([string]$Name)
 
     <!-- Header -->
     <Border Grid.Row="0" BorderBrush="#C8860A" BorderThickness="1,2,1,1"
-            Margin="0,0,0,8" Padding="14,10">
+            Margin="0,0,0,14" Padding="25,18">
       <StackPanel>
         <TextBlock Name="TitleLabel"
                    Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
-                   Foreground="#FFB700" FontSize="13"
+                   Foreground="#FFB700" FontSize="23"
                    TextAlignment="Center" FontWeight="Bold"/>
         <TextBlock Name="CmdrLabel"
-                   Foreground="#C8860A" FontSize="11"
-                   TextAlignment="Center" Margin="0,5,0,0"/>
+                   Foreground="#C8860A" FontSize="19"
+                   TextAlignment="Center" Margin="0,9,0,0"/>
       </StackPanel>
     </Border>
 
     <!-- Status panel -->
     <Border Grid.Row="1" BorderBrush="#1E1E1E" BorderThickness="1"
-            Margin="0,0,0,8" Padding="10,8">
+            Margin="0,0,0,14" Padding="18,14">
       <StackPanel>
-        <TextBlock Text="  STATUS" Foreground="#3A3A3A" FontSize="10"
-                   Margin="0,0,0,6"/>
+        <TextBlock Text="  STATUS" Foreground="#3A3A3A" FontSize="18"
+                   Margin="0,0,0,11"/>
         <StackPanel Name="StatusPanel"/>
       </StackPanel>
     </Border>
 
     <!-- Log pane -->
     <Border Grid.Row="2" BorderBrush="#252525" BorderThickness="1"
-            Margin="0,0,0,8">
+            Margin="0,0,0,14">
       <Grid>
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="  LOG" Foreground="#3A3A3A" FontSize="10"
-                   Margin="0,6,0,2" Padding="4,0"/>
+        <TextBlock Grid.Row="0" Text="  LOG" Foreground="#3A3A3A" FontSize="18"
+                   Margin="0,11,0,4" Padding="7,0"/>
         <RichTextBox Name="LogBox" Grid.Row="1"
                      IsReadOnly="True"
                      Background="#0D0D0D"
                      BorderThickness="0"
-                     Padding="8,4"
-                     FontSize="11"
+                     Padding="14,7"
+                     FontSize="19"
                      VerticalScrollBarVisibility="Auto"
                      HorizontalScrollBarVisibility="Disabled">
-          <FlowDocument PageWidth="3000"/>
+          <FlowDocument PageWidth="5000"/>
         </RichTextBox>
       </Grid>
     </Border>
 
     <!-- Button bar -->
     <Border Grid.Row="3" BorderBrush="#1E1E1E" BorderThickness="0,1,0,0"
-            Padding="0,8,0,0">
+            Padding="0,14,0,0">
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
         <Button Name="LaunchBtn"
                 Content="[ LAUNCH ]"
-                Width="130" Height="34" Margin="0,0,8,0"
+                Width="228" Height="60" Margin="0,0,14,0"
                 Background="#1A1100" Foreground="#FFB700"
                 BorderBrush="#C8860A" BorderThickness="1"
-                FontFamily="Consolas" FontSize="13" Cursor="Hand"/>
+                FontFamily="Consolas" FontSize="23" Cursor="Hand"/>
         <CheckBox Name="AutoStartChk"
                   Content="auto-start"
                   Foreground="#3A3A3A"
+                  FontFamily="Consolas" FontSize="19"
                   VerticalAlignment="Center"
                   VerticalContentAlignment="Center"
-                  Margin="0,0,16,0"
+                  Margin="0,0,28,0"
                   Cursor="Hand"/>
         <Button Name="ShutdownBtn"
                 Content="[ SHUTDOWN ]"
-                Width="120" Height="34" Margin="0,0,14,0"
+                Width="210" Height="60" Margin="0,0,25,0"
                 Background="#0D0D0D" Foreground="#555555"
                 BorderBrush="#2A2A2A" BorderThickness="1"
-                FontFamily="Consolas" FontSize="12" Cursor="Hand"/>
+                FontFamily="Consolas" FontSize="21" Cursor="Hand"/>
         <Button Name="SettingsBtn"
                 Content="Settings"
-                Width="90" Height="34"
+                Width="158" Height="60"
                 Background="#0D0D0D" Foreground="#555555"
                 BorderBrush="#2A2A2A" BorderThickness="1"
-                FontFamily="Consolas" FontSize="11" Cursor="Hand"/>
+                FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
       </StackPanel>
     </Border>
   </Grid>
@@ -251,19 +252,17 @@ $Dispatcher   = $Window.Dispatcher
 # Without this, any unhandled exception on the UI thread kills the process
 # with no log entry. This handler logs the full exception + stack trace so
 # the root cause can be identified, then keeps the app alive.
-$Dispatcher.UnhandledException.Add(
-    [System.Windows.Threading.DispatcherUnhandledExceptionEventHandler]{
-        param($s, $e)
-        $ts = Get-Date -Format 'HH:mm:ss'
-        Add-Content -Path $script:LogFile `
-            -Value "[$ts] [UNHANDLED] $($e.Exception.GetType().Name): $($e.Exception.Message)" `
-            -EA SilentlyContinue
-        Add-Content -Path $script:LogFile `
-            -Value $e.Exception.StackTrace `
-            -EA SilentlyContinue
-        $e.Handled = $true
-    }
-)
+$Dispatcher.Add_UnhandledException({
+    param($s, $e)
+    $ts = Get-Date -Format 'HH:mm:ss'
+    Add-Content -Path $script:LogFile `
+        -Value "[$ts] [UNHANDLED] $($e.Exception.GetType().Name): $($e.Exception.Message)" `
+        -EA SilentlyContinue
+    Add-Content -Path $script:LogFile `
+        -Value $e.Exception.StackTrace `
+        -EA SilentlyContinue
+    $e.Handled = $true
+})
 
 # ── Window icon ───────────────────────────────────────────
 $_iconPath = Join-Path $PSScriptRoot 'icon.ico'
@@ -307,9 +306,9 @@ $script:StatusRows = @{}
 
 function New-StatusRow { param([string]$Key, [string]$Label)
     $Grid = [System.Windows.Controls.Grid]::new()
-    $Grid.Margin = [System.Windows.Thickness]::new(0,2,0,2)
+    $Grid.Margin = [System.Windows.Thickness]::new(0,4,0,4)
 
-    foreach ($spec in @(14, 190, 0, 80)) {
+    foreach ($spec in @(25, 333, 0, 140)) {
         $cd = [System.Windows.Controls.ColumnDefinition]::new()
         $cd.Width = if ($spec -eq 0) {
             [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
@@ -320,26 +319,26 @@ function New-StatusRow { param([string]$Key, [string]$Label)
     }
 
     $Dot = [System.Windows.Shapes.Ellipse]::new()
-    $Dot.Width = 8; $Dot.Height = 8; $Dot.VerticalAlignment = 'Center'
+    $Dot.Width = 14; $Dot.Height = 14; $Dot.VerticalAlignment = 'Center'
     $Dot.Fill = Brush '#2A2A2A'
     [System.Windows.Controls.Grid]::SetColumn($Dot, 0)
     $Grid.Children.Add($Dot) | Out-Null
 
     $NameTB = [System.Windows.Controls.TextBlock]::new()
     $NameTB.Text = "  $Label"
-    $NameTB.FontSize = 11; $NameTB.VerticalAlignment = 'Center'
+    $NameTB.FontSize = 19; $NameTB.VerticalAlignment = 'Center'
     $NameTB.Foreground = Brush '#C8860A'
     [System.Windows.Controls.Grid]::SetColumn($NameTB, 1)
     $Grid.Children.Add($NameTB) | Out-Null
 
     $StateTB = [System.Windows.Controls.TextBlock]::new()
-    $StateTB.Text = '—'; $StateTB.FontSize = 11; $StateTB.VerticalAlignment = 'Center'
+    $StateTB.Text = '—'; $StateTB.FontSize = 19; $StateTB.VerticalAlignment = 'Center'
     $StateTB.Foreground = Brush '#3A3A3A'
     [System.Windows.Controls.Grid]::SetColumn($StateTB, 2)
     $Grid.Children.Add($StateTB) | Out-Null
 
     $TimerTB = [System.Windows.Controls.TextBlock]::new()
-    $TimerTB.Text = ''; $TimerTB.FontSize = 11; $TimerTB.VerticalAlignment = 'Center'
+    $TimerTB.Text = ''; $TimerTB.FontSize = 19; $TimerTB.VerticalAlignment = 'Center'
     $TimerTB.HorizontalAlignment = 'Right'; $TimerTB.Foreground = Brush '#555555'
     [System.Windows.Controls.Grid]::SetColumn($TimerTB, 3)
     $Grid.Children.Add($TimerTB) | Out-Null
@@ -526,14 +525,15 @@ $LaunchScript = {
             if (-not $App.Path) { continue }
             if (Get-Process -Name $App.Process -EA SilentlyContinue) {
                 UiLog "$($App.Name) already running — skipping." -Lvl Dim
-                UiStatus $App.Name 'Already running' '#555555'
+                $Launched += $App.Process
+                UiStatus $App.Name 'Online' '#44CC44'
                 continue
             }
             try {
                 UiLog "Launching $($App.Name)..."
                 $P = Start-Process $App.Path -PassThru -EA Stop
                 $Launched += $App.Process
-                UiStatus $App.Name 'Launched' '#FFB700'
+                UiStatus $App.Name 'Online' '#44CC44'
                 UiLog "$($App.Name) online. (PID: $($P.Id))" -Lvl Success
             } catch {
                 UiLog "Failed to launch $($App.Name): $_" -Lvl Warning
