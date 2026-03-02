@@ -1,3 +1,2 @@
-Launches the game, EDMC, Odyssey materials helper, SrvSurvey, and EDCoPilot in one go. Can right click > run with powershell, or use PSEBuilder by durgesh (https://github.com/durgesh0505/PSEBuilder) to make it into an exe. I've included an example exe and also the .ico I use.
-
+Launches the game, EDMC, Odyssey materials helper, SrvSurvey, EDHM-UI, opentrack, and EDCoPilot in one go. must be compiled to exe with PSEBuilder by durgesh (https://github.com/durgesh0505/PSEBuilder). includes ability to add programs of your own choosing to the clowncar.
 **NOTE that while filepaths are generalized as best as I can, if you put the third party apps in weird places it may not find them. won't cause a crash, though.
