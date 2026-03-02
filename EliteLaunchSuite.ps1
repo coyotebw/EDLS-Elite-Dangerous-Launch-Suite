@@ -161,7 +161,11 @@ function WaitSpinner {
     }
 
     $TotalElapsed = (Get-Date) - $StartTime
-    $FinalTime    = "{0:hh\:mm\:ss}" -f $TotalElapsed
+    $FinalTime    = if ($TotalElapsed.TotalHours -ge 1) {
+        "{0:hh\:mm\:ss}" -f $TotalElapsed
+    } else {
+        "{0:mm\:ss}" -f $TotalElapsed
+    }
     Write-Host "`r  $Message ✔  [$FinalTime]   " -ForegroundColor Yellow
 }
 
@@ -398,6 +402,7 @@ foreach ($App in $Apps) {
 
     if (Is-Process-Running $App.Process) {
         Write-Log "$($App.Name) already running — skipping." -Level Dim
+        $LaunchedProcesses += $App.Process
         continue
     }
 

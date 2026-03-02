@@ -294,8 +294,10 @@ $LaunchBtn.Add_MouseEnter({
 })
 $LaunchBtn.Add_MouseLeave({
     try {
-        $LaunchBtn.Background  = Brush '#1A1100'
-        $LaunchBtn.BorderBrush = Brush '#C8860A'
+        if ($LaunchBtn.IsEnabled) {
+            $LaunchBtn.Background  = Brush '#1A1100'
+            $LaunchBtn.BorderBrush = Brush '#C8860A'
+        }
     } catch {}
 })
 $ShutdownBtn.Add_MouseEnter({
@@ -870,6 +872,7 @@ $SettingsBtn.Add_Click({
                 CmdrName           = $CmdrBox.Text
                 LaunchDelaySeconds = [int]$DelayBox.Text
                 EliteAppId         = [int]$AppIdBox.Text
+                AutoStart          = $script:AutoStart
                 Apps               = $NewApps
             } | ConvertTo-Json -Depth 5 |
                 Set-Content $script:SettingsFile -Encoding UTF8
