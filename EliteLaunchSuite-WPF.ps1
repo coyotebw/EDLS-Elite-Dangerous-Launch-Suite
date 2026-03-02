@@ -91,6 +91,7 @@ function Load-Settings {
     $script:CmdrName           = if ($J.CmdrName)                     { $J.CmdrName }                else { $Defaults.CmdrName }
     $script:EliteAppId         = if ($null -ne $J.EliteAppId)         { [int]$J.EliteAppId }         else { $Defaults.EliteAppId }
     $script:LaunchDelaySeconds = if ($null -ne $J.LaunchDelaySeconds) { [int]$J.LaunchDelaySeconds } else { $Defaults.LaunchDelaySeconds }
+    $script:AutoStart          = if ($null -ne $J.AutoStart)          { [bool]$J.AutoStart }          else { $false }
 
     $script:Apps = @()
     foreach ($E in $J.Apps) {
@@ -110,6 +111,17 @@ function Load-Settings {
 function Brush { param($Hex)
     [System.Windows.Media.SolidColorBrush]`
     [System.Windows.Media.ColorConverter]::ConvertFromString($Hex)
+}
+
+# ── AutoStart setting persister ───────────────────────────
+function Save-AutoStart { param([bool]$Value)
+    try {
+        $J = Get-Content $script:SettingsFile -Raw -EA Stop |
+             ConvertFrom-Json -EA Stop
+        $J | Add-Member -NotePropertyName AutoStart -NotePropertyValue $Value -Force
+        $J | ConvertTo-Json -Depth 5 |
+             Set-Content $script:SettingsFile -Encoding UTF8
+    } catch {}
 }
 
 # ── CMDR label formatter ──────────────────────────────────
@@ -140,7 +152,7 @@ function Format-CmdrLine { param([string]$Name)
     </Grid.RowDefinitions>
 
     <!-- Header -->
-    <Border Grid.Row="0" BorderBrush="#C8860A" BorderThickness="1"
+    <Border Grid.Row="0" BorderBrush="#C8860A" BorderThickness="1,2,1,1"
             Margin="0,0,0,8" Padding="14,10">
       <StackPanel>
         <TextBlock Name="TitleLabel"
@@ -164,36 +176,59 @@ function Format-CmdrLine { param([string]$Name)
     </Border>
 
     <!-- Log pane -->
-    <Border Grid.Row="2" BorderBrush="#1E1E1E" BorderThickness="1"
+    <Border Grid.Row="2" BorderBrush="#252525" BorderThickness="1"
             Margin="0,0,0,8">
-      <RichTextBox Name="LogBox"
-                   IsReadOnly="True"
-                   Background="#0D0D0D"
-                   BorderThickness="0"
-                   Padding="8,6"
-                   FontSize="11"
-                   VerticalScrollBarVisibility="Auto"
-                   HorizontalScrollBarVisibility="Disabled">
-        <FlowDocument PageWidth="3000"/>
-      </RichTextBox>
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="  LOG" Foreground="#3A3A3A" FontSize="10"
+                   Margin="0,6,0,2" Padding="4,0"/>
+        <RichTextBox Name="LogBox" Grid.Row="1"
+                     IsReadOnly="True"
+                     Background="#0D0D0D"
+                     BorderThickness="0"
+                     Padding="8,4"
+                     FontSize="11"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Disabled">
+          <FlowDocument PageWidth="3000"/>
+        </RichTextBox>
+      </Grid>
     </Border>
 
     <!-- Button bar -->
-    <StackPanel Grid.Row="3" Orientation="Horizontal"
-                HorizontalAlignment="Center" Margin="0,4,0,0">
-      <Button Name="LaunchBtn"
-              Content="[ LAUNCH ]"
-              Width="130" Height="34" Margin="0,0,14,0"
-              Background="#1A1100" Foreground="#FFB700"
-              BorderBrush="#C8860A" BorderThickness="1"
-              FontFamily="Consolas" FontSize="13" Cursor="Hand"/>
-      <Button Name="SettingsBtn"
-              Content="Settings"
-              Width="90" Height="34"
-              Background="#0D0D0D" Foreground="#555555"
-              BorderBrush="#2A2A2A" BorderThickness="1"
-              FontFamily="Consolas" FontSize="11" Cursor="Hand"/>
-    </StackPanel>
+    <Border Grid.Row="3" BorderBrush="#1E1E1E" BorderThickness="0,1,0,0"
+            Padding="0,8,0,0">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+        <Button Name="LaunchBtn"
+                Content="[ LAUNCH ]"
+                Width="130" Height="34" Margin="0,0,8,0"
+                Background="#1A1100" Foreground="#FFB700"
+                BorderBrush="#C8860A" BorderThickness="1"
+                FontFamily="Consolas" FontSize="13" Cursor="Hand"/>
+        <CheckBox Name="AutoStartChk"
+                  Content="auto-start"
+                  Foreground="#3A3A3A"
+                  VerticalAlignment="Center"
+                  VerticalContentAlignment="Center"
+                  Margin="0,0,16,0"
+                  Cursor="Hand"/>
+        <Button Name="ShutdownBtn"
+                Content="[ SHUTDOWN ]"
+                Width="120" Height="34" Margin="0,0,14,0"
+                Background="#0D0D0D" Foreground="#555555"
+                BorderBrush="#2A2A2A" BorderThickness="1"
+                FontFamily="Consolas" FontSize="12" Cursor="Hand"/>
+        <Button Name="SettingsBtn"
+                Content="Settings"
+                Width="90" Height="34"
+                Background="#0D0D0D" Foreground="#555555"
+                BorderBrush="#2A2A2A" BorderThickness="1"
+                FontFamily="Consolas" FontSize="11" Cursor="Hand"/>
+      </StackPanel>
+    </Border>
   </Grid>
 </Window>
 '@
@@ -205,10 +240,41 @@ $TitleLabel = $Window.FindName('TitleLabel')
 $CmdrLabel  = $Window.FindName('CmdrLabel')
 $StatusPanel= $Window.FindName('StatusPanel')
 $LogBox     = $Window.FindName('LogBox')
-$LaunchBtn  = $Window.FindName('LaunchBtn')
-$SettingsBtn= $Window.FindName('SettingsBtn')
-$LogDocument= $LogBox.Document
-$Dispatcher = $Window.Dispatcher
+$LaunchBtn    = $Window.FindName('LaunchBtn')
+$SettingsBtn  = $Window.FindName('SettingsBtn')
+$AutoStartChk = $Window.FindName('AutoStartChk')
+$ShutdownBtn  = $Window.FindName('ShutdownBtn')
+$LogDocument  = $LogBox.Document
+$Dispatcher   = $Window.Dispatcher
+
+# ── Window icon ───────────────────────────────────────────
+$_iconPath = Join-Path $PSScriptRoot 'icon.ico'
+if (Test-Path $_iconPath) {
+    try {
+        $Window.Icon = [System.Windows.Media.Imaging.BitmapImage]::new(
+            [System.Uri]::new($_iconPath))
+    } catch {}
+}
+
+# ── Button hover effects ──────────────────────────────────
+$LaunchBtn.Add_MouseEnter({
+    if ($LaunchBtn.IsEnabled) {
+        $LaunchBtn.Background   = Brush '#2A2000'
+        $LaunchBtn.BorderBrush  = Brush '#FFB700'
+    }
+})
+$LaunchBtn.Add_MouseLeave({
+    $LaunchBtn.Background  = Brush '#1A1100'
+    $LaunchBtn.BorderBrush = Brush '#C8860A'
+})
+$ShutdownBtn.Add_MouseEnter({
+    $ShutdownBtn.Foreground   = Brush '#CC4444'
+    $ShutdownBtn.BorderBrush  = Brush '#663333'
+})
+$ShutdownBtn.Add_MouseLeave({
+    $ShutdownBtn.Foreground  = Brush '#555555'
+    $ShutdownBtn.BorderBrush = Brush '#2A2A2A'
+})
 
 # ── Status row management ─────────────────────────────────
 $script:StatusRows = @{}
@@ -559,6 +625,41 @@ $Window.Add_Closed({
     }
 })
 
+# ── Auto-start checkbox ───────────────────────────────────
+$AutoStartChk.Add_Checked({
+    $AutoStartChk.Foreground = Brush '#FFB700'
+    Save-AutoStart $true
+})
+$AutoStartChk.Add_Unchecked({
+    $AutoStartChk.Foreground = Brush '#3A3A3A'
+    Save-AutoStart $false
+})
+
+# ── Shutdown button ───────────────────────────────────────
+$ShutdownBtn.Add_Click({
+    if (-not $script:Apps) { Load-Settings }
+    $anyFound = $false
+    foreach ($App in $script:Apps) {
+        $Running = Get-Process -Name $App.Process -EA SilentlyContinue
+        if ($Running) {
+            $anyFound = $true
+            Write-UILog "Stopping $($App.Name)..." -Level Warning
+            $Running | Stop-Process -Force -EA SilentlyContinue
+            $row = $script:StatusRows[$App.Name]
+            if ($row) {
+                $row.Dot.Fill           = Brush '#555555'
+                $row.StateTB.Text       = 'Closed'
+                $row.StateTB.Foreground = Brush '#555555'
+            }
+        }
+    }
+    if ($anyFound) {
+        Write-UILog 'Third-party tools shut down.' -Level Success
+    } else {
+        Write-UILog 'No tools running.' -Level Dim
+    }
+})
+
 # ── Settings button ───────────────────────────────────────
 $SettingsBtn.Add_Click({
     Load-Settings
@@ -743,6 +844,26 @@ $SettingsBtn.Add_Click({
 Load-Settings
 $CmdrLabel.Text = Format-CmdrLine $script:CmdrName
 Rebuild-StatusRows
+
+# Restore auto-start checkbox from settings
+$AutoStartChk.IsChecked = $script:AutoStart
+if ($script:AutoStart) { $AutoStartChk.Foreground = Brush '#FFB700' }
+
+# Auto-trigger launch once window is fully rendered
+$Window.Add_Loaded({
+    if ($AutoStartChk.IsChecked) {
+        $Dispatcher.BeginInvoke([Action]{
+            $LaunchBtn.RaiseEvent(
+                [System.Windows.RoutedEventArgs]::new(
+                    [System.Windows.Controls.Button]::ClickEvent))
+        })
+    }
+})
+
 Write-UILog 'Elite: Dangerous Launch Suite ready.' -Level Success
-Write-UILog 'Click LAUNCH to begin.' -Level Dim
+if ($script:AutoStart) {
+    Write-UILog 'Auto-start enabled — launching...' -Level Dim
+} else {
+    Write-UILog 'Click LAUNCH to begin.' -Level Dim
+}
 $Window.ShowDialog() | Out-Null
