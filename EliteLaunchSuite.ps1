@@ -225,6 +225,18 @@ function Load-Settings {
             Process = "EDCoPilot"
             Path    = 'C:\EDCoPilot\EDCoPilot.exe'
             Enabled = $true
+        },
+        [ordered]@{
+            Name    = "EDHM_UI"
+            Process = "EDHM_UI"
+            Path    = '%ProgramFiles%\EDHM_UI\EDHM_UI.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = "opentrack"
+            Process = "opentrack"
+            Path    = '%ProgramFiles%\opentrack\opentrack.exe'
+            Enabled = $true
         }
     )
 
