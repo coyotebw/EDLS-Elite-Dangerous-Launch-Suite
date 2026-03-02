@@ -74,25 +74,38 @@ function Write-Log {
 }
 
 function Write-Header {
-    $W     = 78  # inner width between ║ borders
-    $Blank = ' ' * $W
+    # Spread letters with single spaces; double-space between words — matches header style
+    function SpaceOut([string]$Text) {
+        ($Text.ToUpper() -split '\s+' | ForEach-Object { $_.ToCharArray() -join ' ' }) -join '  '
+    }
 
     function Pad([string]$Text) {
         $P = [Math]::Max(0, $W - $Text.Length)
         return (' ' * [Math]::Floor($P / 2)) + $Text + (' ' * [Math]::Ceiling($P / 2))
     }
 
-    # Spread letters with single spaces; double-space between words — matches header style
-    function SpaceOut([string]$Text) {
-        ($Text.ToUpper() -split '\s+' | ForEach-Object { $_.ToCharArray() -join ' ' }) -join '  '
-    }
+    $Title    = '◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆'
+    $CmdrLine = "C M D R  ·  $(SpaceOut $script:CmdrName)"
 
-    Write-Host "╔$('═' * $W)╗"                                                                     -ForegroundColor DarkYellow
-    Write-Host "║$Blank║"                                                                             -ForegroundColor DarkYellow
-    Write-Host "║$(Pad '◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆')║"     -ForegroundColor Yellow
-    Write-Host "║$(Pad "C M D R  ·  $(SpaceOut $script:CmdrName)")║"                                 -ForegroundColor DarkYellow
-    Write-Host "║$Blank║"                                                                             -ForegroundColor DarkYellow
-    Write-Host "╚$('═' * $W)╝"                                                                     -ForegroundColor DarkYellow
+    # Inner width: fit the longer line with at least 4 chars of padding each side
+    $W     = [Math]::Max(78, [Math]::Max($Title.Length, $CmdrLine.Length) + 8)
+    $Blank = ' ' * $W
+
+    # Widen the console window if needed
+    try {
+        $Required = $W + 2  # +2 for the ║ border chars
+        if ($Host.UI.RawUI.WindowSize.Width -lt $Required) {
+            $Host.UI.RawUI.WindowSize = New-Object System.Management.Automation.Host.Size(
+                $Required, $Host.UI.RawUI.WindowSize.Height)
+        }
+    } catch { }
+
+    Write-Host "╔$('═' * $W)╗"    -ForegroundColor DarkYellow
+    Write-Host "║$Blank║"          -ForegroundColor DarkYellow
+    Write-Host "║$(Pad $Title)║"   -ForegroundColor Yellow
+    Write-Host "║$(Pad $CmdrLine)║" -ForegroundColor DarkYellow
+    Write-Host "║$Blank║"          -ForegroundColor DarkYellow
+    Write-Host "╚$('═' * $W)╝"    -ForegroundColor DarkYellow
     Write-Host ""
 }
 
