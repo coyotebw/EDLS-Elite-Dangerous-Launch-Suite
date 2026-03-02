@@ -360,7 +360,7 @@ do {
 } until ($EliteProcess -or ((Get-Date) -gt $EliteStartTimeout))
 
 Assert-OrExit `
-    ($EliteProcess) `
+    ($null -ne $EliteProcess) `
     "Elite Dangerous did not start within 60 seconds."
 
 Write-Log "Elite: Dangerous online. (PID: $($EliteProcess.Id))" -Level Success
