@@ -466,8 +466,7 @@ $LaunchBtn.Add_Click({
     Write-UILog 'Launch sequence initiated.' -Level Success
 
     $ISS = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
-    $VE  = 'System.Management.Automation.Runspaces.SessionStateVariableEntry'
-    @(
+    foreach ($Pair in @(
         @('Dispatcher',         $Dispatcher),
         @('LogFile',            $script:LogFile),
         @('EliteAppId',         $script:EliteAppId),
@@ -479,8 +478,10 @@ $LaunchBtn.Add_Click({
         @('LaunchBtn',          $LaunchBtn),
         @('ElapsedTimer',       $ElapsedTimer),
         @('SharedState',        $SharedState)
-    ) | ForEach-Object {
-        $ISS.Variables.Add(([type]"$VE")::new($_[0], $_[1], ''))
+    )) {
+        $ISS.Variables.Add(
+            [System.Management.Automation.Runspaces.SessionStateVariableEntry]::new(
+                $Pair[0], $Pair[1], ''))
     }
 
     $RS = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($ISS)
