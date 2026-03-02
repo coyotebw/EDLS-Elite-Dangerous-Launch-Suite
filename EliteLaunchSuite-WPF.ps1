@@ -60,6 +60,18 @@ function Load-Settings {
             Process = 'EDCoPilot'
             Path    = 'C:\EDCoPilot\EDCoPilot.exe'
             Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'EDHM_UI'
+            Process = 'EDHM_UI'
+            Path    = '%ProgramFiles%\EDHM_UI\EDHM_UI.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'opentrack'
+            Process = 'opentrack'
+            Path    = '%ProgramFiles%\opentrack\opentrack.exe'
+            Enabled = $true
         }
     )
     $Defaults = [ordered]@{
@@ -618,22 +630,31 @@ $SettingsBtn.Add_Click({
       </DataGrid.ColumnHeaderStyle>
       <DataGrid.Columns>
         <DataGridCheckBoxColumn Header="On"      Binding="{Binding Enabled}" Width="36"/>
-        <DataGridTextColumn    Header="Name"    Binding="{Binding Name}"    Width="130" IsReadOnly="True"/>
+        <DataGridTextColumn    Header="Name"    Binding="{Binding Name}"    Width="130"/>
         <DataGridTextColumn    Header="Process" Binding="{Binding Process}" Width="180"/>
         <DataGridTextColumn    Header="Path"    Binding="{Binding Path}"    Width="*"/>
       </DataGrid.Columns>
     </DataGrid>
 
     <!-- Buttons -->
-    <StackPanel Grid.Row="2" Orientation="Horizontal"
-                HorizontalAlignment="Right" Margin="0,12,0,0">
-      <Button Name="SaveBtn" Content="Save" Width="80" Height="30" Margin="0,0,8,0"
-              Background="#1A1100" Foreground="#FFB700"
-              BorderBrush="#C8860A" BorderThickness="1" Cursor="Hand"/>
-      <Button Name="CancelBtn" Content="Cancel" Width="80" Height="30"
-              Background="#0D0D0D" Foreground="#555555"
-              BorderBrush="#2A2A2A" BorderThickness="1" Cursor="Hand"/>
-    </StackPanel>
+    <Grid Grid.Row="2" Margin="0,12,0,0">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+        <Button Name="AddAppBtn" Content="+ Add" Width="72" Height="30" Margin="0,0,6,0"
+                Background="#0D0D0D" Foreground="#C8860A"
+                BorderBrush="#2A2A2A" BorderThickness="1" Cursor="Hand"/>
+        <Button Name="RemoveAppBtn" Content="- Remove" Width="84" Height="30"
+                Background="#0D0D0D" Foreground="#555555"
+                BorderBrush="#2A2A2A" BorderThickness="1" Cursor="Hand"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button Name="SaveBtn" Content="Save" Width="80" Height="30" Margin="0,0,8,0"
+                Background="#1A1100" Foreground="#FFB700"
+                BorderBrush="#C8860A" BorderThickness="1" Cursor="Hand"/>
+        <Button Name="CancelBtn" Content="Cancel" Width="80" Height="30"
+                Background="#0D0D0D" Foreground="#555555"
+                BorderBrush="#2A2A2A" BorderThickness="1" Cursor="Hand"/>
+      </StackPanel>
+    </Grid>
   </Grid>
 </Window>
 '@
@@ -646,8 +667,10 @@ $SettingsBtn.Add_Click({
     $AppIdBox = $Dlg.FindName('AppIdBox')
     $DelayBox = $Dlg.FindName('DelayBox')
     $AppsGrid = $Dlg.FindName('AppsGrid')
-    $SaveBtn  = $Dlg.FindName('SaveBtn')
-    $CancelBtn= $Dlg.FindName('CancelBtn')
+    $AddAppBtn    = $Dlg.FindName('AddAppBtn')
+    $RemoveAppBtn = $Dlg.FindName('RemoveAppBtn')
+    $SaveBtn      = $Dlg.FindName('SaveBtn')
+    $CancelBtn    = $Dlg.FindName('CancelBtn')
 
     $CmdrBox.Text  = $script:CmdrName
     $AppIdBox.Text = "$($script:EliteAppId)"
@@ -669,6 +692,23 @@ $SettingsBtn.Add_Click({
     $Col = [System.Collections.ObjectModel.ObservableCollection[PSCustomObject]]::new()
     foreach ($Item in $AppItems) { $Col.Add($Item) }
     $AppsGrid.ItemsSource = $Col
+
+    $AddAppBtn.Add_Click({
+        $NewItem = [PSCustomObject]@{
+            Enabled = $true
+            Name    = 'NewApp'
+            Process = 'NewApp'
+            Path    = ''
+        }
+        $Col.Add($NewItem)
+        $AppsGrid.SelectedItem = $NewItem
+        $AppsGrid.ScrollIntoView($NewItem)
+    })
+
+    $RemoveAppBtn.Add_Click({
+        $Selected = $AppsGrid.SelectedItem
+        if ($Selected) { $Col.Remove($Selected) }
+    })
 
     $SaveBtn.Add_Click({
         try {
