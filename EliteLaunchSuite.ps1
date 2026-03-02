@@ -16,9 +16,6 @@ if (-not [Environment]::Is64BitProcess) {
  # Vars |||||||||||||||||||||
  # ==========================
 
-#window name
-$Host.UI.RawUI.WindowTitle = "Elite: Dangerous | One-click launch"
-
 #persistent data directory — safe for both .ps1 and compiled .exe contexts
 $DataDir      = Join-Path $env:LOCALAPPDATA "EDLaunchSuite"
 $LogFile      = Join-Path $DataDir "launcher.log"
@@ -34,13 +31,74 @@ $LaunchedProcesses = @()
  # Helper Functions ||||||||||||||
  # ===============================
 
+function Set-ConsoleStyle {
+    # Apply Elite Dangerous amber-on-black aesthetic
+    try {
+        $Host.UI.RawUI.WindowTitle     = "Elite: Dangerous | Launch Suite"
+        $Host.UI.RawUI.BackgroundColor = 'Black'
+        $Host.UI.RawUI.ForegroundColor = 'DarkYellow'
+        if ($Host.UI.RawUI.WindowSize.Width -lt 80) {
+            $Host.UI.RawUI.WindowSize = New-Object System.Management.Automation.Host.Size(
+                80, $Host.UI.RawUI.WindowSize.Height)
+        }
+        Clear-Host  # fill window with new background color
+    } catch { <# non-interactive or restricted host — skip gracefully #> }
+}
+
 function Write-Log {
-    param ($Message)
-    $Line = "[$(Get-Date -Format 'HH:mm:ss')] $Message"
-    Write-Host $Line
+    param (
+        $Message,
+        [ValidateSet('Info','Success','Warning','Error','Dim')]
+        [string]$Level = 'Info'
+    )
+
+    $Prefix = switch ($Level) {
+        'Warning' { '▲ ' }
+        'Error'   { '✖ ' }
+        default   { '' }
+    }
+
+    $Color = switch ($Level) {
+        'Success' { 'Yellow'     }
+        'Warning' { 'Yellow'     }
+        'Error'   { 'Red'        }
+        'Dim'     { 'DarkGray'   }
+        default   { 'DarkYellow' }
+    }
+
+    $Line = "[$(Get-Date -Format 'HH:mm:ss')] $Prefix$Message"
+    Write-Host $Line -ForegroundColor $Color
     if ($script:LogFile) {
         Add-Content -Path $script:LogFile -Value $Line -ErrorAction SilentlyContinue
     }
+}
+
+function Write-Header {
+    $W     = 78  # inner width between ║ borders
+    $Blank = ' ' * $W
+
+    function Pad([string]$Text) {
+        $P = [Math]::Max(0, $W - $Text.Length)
+        return (' ' * [Math]::Floor($P / 2)) + $Text + (' ' * [Math]::Ceiling($P / 2))
+    }
+
+    Write-Host "╔$('═' * $W)╗"                                                                     -ForegroundColor DarkYellow
+    Write-Host "║$Blank║"                                                                             -ForegroundColor DarkYellow
+    Write-Host "║$(Pad '◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆')║"     -ForegroundColor Yellow
+    Write-Host "║$(Pad 'C M D R  ·  C O Y O T E  B O N G W A T E R')║"                             -ForegroundColor DarkYellow
+    Write-Host "║$Blank║"                                                                             -ForegroundColor DarkYellow
+    Write-Host "╚$('═' * $W)╝"                                                                     -ForegroundColor DarkYellow
+    Write-Host ""
+}
+
+function Write-Phase {
+    param([string]$Label)
+    $Fill = [Math]::Max(2, 70 - $Label.Length)
+    Write-Host ""
+    Write-Host "  ◈  " -ForegroundColor DarkYellow -NoNewline
+    Write-Host $Label  -ForegroundColor White       -NoNewline
+    Write-Host ('  ' + '─' * $Fill) -ForegroundColor DarkGray
+    Write-Host ""
 }
 
 function Is-Process-Running {
@@ -61,29 +119,32 @@ function WaitSpinner {
         [string]$Message
     )
 
-    $Spinner = @('|', '/', '-', '\')
-    $Index = 0
+    $Spinner   = @('|', '/', '-', '\')
+    $Index     = 0
     $StartTime = Get-Date
 
-    Write-Host ""  # spacer line
+    Write-Host ""
 
     while (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue) {
 
         $Elapsed = (Get-Date) - $StartTime
-        if ($Elapsed.TotalHours -ge 1) {
-            $ElapsedText = "{0:hh\:mm\:ss}" -f $Elapsed
+        $ElapsedText = if ($Elapsed.TotalHours -ge 1) {
+            "{0:hh\:mm\:ss}" -f $Elapsed
+        } else {
+            "{0:mm\:ss}" -f $Elapsed
         }
-        else {
-            $ElapsedText = "{0:mm\:ss}" -f $Elapsed
-        }
+
         $Char = $Spinner[$Index % $Spinner.Count]
-        Write-Host -NoNewline "`r$Message $Char  [$ElapsedText]"
+        Write-Host -NoNewline "`r  $Message " -ForegroundColor DarkYellow
+        Write-Host -NoNewline $Char           -ForegroundColor Yellow
+        Write-Host -NoNewline "  [$ElapsedText]" -ForegroundColor DarkGray
         Start-Sleep -Milliseconds 250
         $Index++
     }
+
     $TotalElapsed = (Get-Date) - $StartTime
-    $FinalTime = "{0:hh\:mm\:ss}" -f $TotalElapsed
-    Write-Host "`r$Message ✔  [$FinalTime]"
+    $FinalTime    = "{0:hh\:mm\:ss}" -f $TotalElapsed
+    Write-Host "`r  $Message ✔  [$FinalTime]   " -ForegroundColor Yellow
 }
 
 #error checking
@@ -112,8 +173,8 @@ function Assert-OrExit {
     )
 
     if (-not $Condition) {
-        Write-Log "ERROR: $ErrorMessage"
-        Write-Log "Launcher cannot continue."
+        Write-Log $ErrorMessage          -Level Error
+        Write-Log "Launcher cannot continue." -Level Error
         Start-Sleep -Seconds 3
         exit 1
     }
@@ -158,8 +219,8 @@ function Load-Settings {
     # Create settings file with defaults on first run
     if (-not (Test-Path $script:SettingsFile)) {
         $Defaults | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8
-        Write-Log "Settings file created: $($script:SettingsFile)"
-        Write-Log "Edit it to customise paths, delays, and which tools to launch."
+        Write-Log "Settings file created: $($script:SettingsFile)" -Level Success
+        Write-Log "Edit it to customise paths, delays, and which tools to launch." -Level Dim
     }
 
     # Load and parse settings
@@ -167,7 +228,7 @@ function Load-Settings {
         $Json = Get-Content $script:SettingsFile -Raw -ErrorAction Stop |
             ConvertFrom-Json -ErrorAction Stop
     } catch {
-        Write-Log "WARNING: Could not read settings file — using defaults. ($_)"
+        Write-Log "Could not read settings file — using defaults. ($_)" -Level Warning
         $Json = $Defaults | ConvertTo-Json -Depth 5 | ConvertFrom-Json
     }
 
@@ -182,7 +243,7 @@ function Load-Settings {
         if (-not $Entry.Enabled) { continue }
 
         if (-not $Entry.Name -or -not $Entry.Process) {
-            Write-Log "WARNING: Skipping malformed entry in settings.json (missing Name or Process)."
+            Write-Log "Skipping malformed entry in settings.json (missing Name or Process)." -Level Warning
             continue
         }
 
@@ -200,7 +261,7 @@ function Load-Settings {
                 Select-Object -First 1 -ExpandProperty FullName
             }
         } else {
-            Write-Log "WARNING: $($Entry.Name) has no path in settings and no auto-discovery — will be skipped."
+            Write-Log "$($Entry.Name) has no path in settings and no auto-discovery — will be skipped." -Level Warning
             $null
         }
 
@@ -217,15 +278,17 @@ function Load-Settings {
  # MAIN ||||||||||||||||||||||||||
  # ===============================
 
+Set-ConsoleStyle
+
 #create data directory and open log for this session
 New-Item -ItemType Directory -Path $DataDir -Force | Out-Null
 Add-Content -Path $LogFile -Value "" -ErrorAction SilentlyContinue
 Add-Content -Path $LogFile -Value "=== Session started $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" -ErrorAction SilentlyContinue
 
+Write-Phase "PREFLIGHT"
+
 #load settings from %LOCALAPPDATA%\EDLaunchSuite\settings.json
 Load-Settings
-
-Write-Log "Running preflight checks..."
 
 # Steam must exist
 Assert-OrExit `
@@ -244,32 +307,30 @@ foreach ($App in $Apps) {
     if (Test-Executable $ResolvedPath) {
         $App.Path = $ResolvedPath
     } else {
-        Write-Log "WARNING: $($App.Name) not found — will be skipped."
+        Write-Log "$($App.Name) not found — will be skipped." -Level Warning
         $App.Path = $null
     }
 }
 
 Clear-Host
-Write-Host ""
-Write-Log "||                                ||"
-Write-Log "||          WELCOME CMDR          ||"
-Write-Log "||               o7               ||"
-Write-Host ""
+Write-Header
+Write-Phase "LAUNCH SEQUENCE"
+
 Write-Log "Checking for Steam..."
 #find & boot steam
 if (-not (Is-Process-Running "steam")) {
-    Write-Log "Steam not running. Launching Steam..."
+    Write-Log "Steam offline — launching..."
     Start-Process "steam://open/main"
     Start-Sleep -Seconds 10
 }
 else {
-    Write-Log "Steam already running."
+    Write-Log "Steam online." -Level Success
 }
 
-#boot elite, kill process if not detected within 60s
-Write-Log "Launching Elite: Dangerous..."
+#boot elite, wait up to 60s for it to appear
+Write-Log "Opening Elite: Dangerous via Steam..."
 Start-Process "steam://run/$EliteAppId"
-Write-Log "Waiting for EliteDangerous64.exe...`r`n (GO CLICK THE BUTTON IN FRONTIER LAUNCHER!)`r`n"
+Write-Log "Waiting for EliteDangerous64.exe...`r`n         (Click PLAY in the Frontier Launcher)`r`n"
 $EliteStartTimeout = (Get-Date).AddSeconds(60)
 
 do {
@@ -280,10 +341,11 @@ do {
 
 Assert-OrExit `
     ($EliteProcess) `
-    "Elite Dangerous failed to start."
+    "Elite Dangerous did not start within 60 seconds."
 
-Write-Log "Elite detected (PID: $($EliteProcess.Id))"
+Write-Log "Elite: Dangerous online. (PID: $($EliteProcess.Id))" -Level Success
 
+Write-Phase "LAUNCHING TOOLS"
 
 #launch apps
 foreach ($App in $Apps) {
@@ -293,28 +355,34 @@ foreach ($App in $Apps) {
     }
 
     if (Is-Process-Running $App.Process) {
-        Write-Log "$($App.Name) already running — skipping."
+        Write-Log "$($App.Name) already running — skipping." -Level Dim
         continue
     }
 
     try {
-        Write-Log "Launching $($App.Name) ($($App.Path))..."
+        Write-Log "Launching $($App.Name)..."
         $Proc = Start-Process $App.Path -PassThru -ErrorAction Stop
         $LaunchedProcesses += $App.Process
-        Write-Log "$($App.Name) started (PID: $($Proc.Id))."
+        Write-Log "$($App.Name) online. (PID: $($Proc.Id))" -Level Success
     } catch {
-        Write-Log "WARNING: Failed to launch $($App.Name): $_"
+        Write-Log "Failed to launch $($App.Name): $_" -Level Warning
     }
 
     Start-Sleep -Seconds $LaunchDelaySeconds
 }
 
-Write-Log "All tools launched."
+Write-Log "All systems nominal." -Level Success
 
-#wait for close
-WaitSpinner -ProcessId $EliteProcess.Id -Message "Waiting for Elite: Dangerous to close..."
-Write-Log "Elite: Dangerous has exited."
+Write-Phase "MONITORING"
+
+#wait for elite to close
+WaitSpinner -ProcessId $EliteProcess.Id -Message "Elite: Dangerous"
+
+Write-Phase "SHUTDOWN"
+
+Write-Log "Elite: Dangerous offline."
 Write-Log "Closing third-party tools..."
+
 #kill 3rd party apps on close
 foreach ($ProcessName in $LaunchedProcesses) {
 
@@ -326,7 +394,7 @@ foreach ($ProcessName in $LaunchedProcesses) {
     }
 }
 
-Write-Log "Launcher shutting down. Farewell, CMDR. o7"
+Write-Log "Farewell, CMDR. o7" -Level Success
 Add-Content -Path $LogFile -Value "=== Session ended $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 3
 exit 0
