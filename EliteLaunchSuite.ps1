@@ -218,11 +218,12 @@ $SelfVersionScript = {
     Title="Elite: Dangerous | Launch Suite"
     Background="#0D0D0D"
     FontFamily="Consolas"
-    Width="1295" Height="1070"
-    ResizeMode="CanMinimize"
+    Width="1295" Height="1070" MinWidth="648" MinHeight="535"
+    ResizeMode="CanResizeWithGrip"
     WindowStartupLocation="CenterScreen">
 
-  <Grid Margin="21,18,21,18">
+  <Viewbox Stretch="Uniform">
+  <Grid Width="1253" Height="1034" Margin="21,18,21,18">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
@@ -326,6 +327,7 @@ $SelfVersionScript = {
       </Grid>
     </Border>
   </Grid>
+  </Viewbox>
 </Window>
 '@
 
@@ -344,6 +346,51 @@ $AutoStartBtn    = $Window.FindName('AutoStartBtn')
 $ShutdownBtn     = $Window.FindName('ShutdownBtn')
 $LogDocument     = $LogBox.Document
 $Dispatcher      = $Window.Dispatcher
+
+# ── Aspect-ratio enforcement (WM_SIZING hook) ────────────
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public static class Win32Sizing {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+    public const int WM_SIZING    = 0x0214;
+    public const int WMSZ_TOP     = 3;
+    public const int WMSZ_TOPLEFT = 4;
+    public const int WMSZ_TOPRIGHT= 5;
+
+    public static void Enforce(IntPtr lParam, int edge, double ratio) {
+        RECT r = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
+        int w = r.Right  - r.Left;
+        int h = r.Bottom - r.Top;
+        switch (edge) {
+            case WMSZ_TOP:
+                r.Right = r.Left + (int)Math.Round(h * ratio); break;
+            case WMSZ_TOPLEFT:
+            case WMSZ_TOPRIGHT:
+                r.Top = r.Bottom - (int)Math.Round(w / ratio); break;
+            default:
+                r.Bottom = r.Top + (int)Math.Round(w / ratio); break;
+        }
+        Marshal.StructureToPtr(r, lParam, false);
+    }
+}
+"@
+
+$script:WinAspect = 1295.0 / 1070.0
+
+$Window.Add_SourceInitialized({
+    $src = [System.Windows.Interop.HwndSource]::FromHwnd(
+        [System.Windows.Interop.WindowInteropHelper]::new($Window).Handle)
+    $src.AddHook([System.Windows.Interop.HwndSourceHook]{
+        param($hwnd, $msg, $wParam, $lParam, [ref]$handled)
+        if ($msg -eq [Win32Sizing]::WM_SIZING) {
+            [Win32Sizing]::Enforce($lParam, $wParam.ToInt32(), $script:WinAspect)
+            $handled = $true
+        }
+        return [IntPtr]::Zero
+    })
+})
 
 $ReportIssueLink.NavigateUri = [System.Uri]::new('https://github.com/coyotebw/EDLaunchSuite/issues')
 $ReportIssueLink.Add_RequestNavigate({
