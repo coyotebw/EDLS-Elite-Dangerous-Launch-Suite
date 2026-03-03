@@ -289,10 +289,10 @@ $SelfVersionScript = {
         <!-- Left: fixed author credit + version + issue link -->
         <StackPanel Grid.Column="0" VerticalAlignment="Center">
           <TextBlock Foreground="#555555" FontSize="11"
-                     Text="CMDR Coyote Bongwater  ·  Claude"/>
+                     Text="CMDR Coyote Bongwater (and Claude)"/>
           <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-            <TextBlock Name="VersionLabel" Foreground="#3A3A3A" FontSize="11"/>
-            <TextBlock Foreground="#3A3A3A" FontSize="11" Margin="10,0,0,0">
+            <TextBlock Name="VersionLabel" Foreground="#3A3A3A" FontSize="12"/>
+            <TextBlock Foreground="#3A3A3A" FontSize="12" Margin="10,0,0,0">
               <Hyperlink Name="ReportIssueLink" Foreground="#3A3A3A">report issue</Hyperlink>
             </TextBlock>
           </StackPanel>
@@ -306,7 +306,7 @@ $SelfVersionScript = {
                   BorderBrush="#2A2A2A" BorderThickness="1"
                   FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
           <Button Name="AutoStartBtn"
-                  Content="[ AUTO-START ]"
+                  Content="[ AUTO START ]"
                   Width="210" Height="60" Margin="0,0,14,0"
                   Background="#0D0D0D" Foreground="#555555"
                   BorderBrush="#2A2A2A" BorderThickness="1"
