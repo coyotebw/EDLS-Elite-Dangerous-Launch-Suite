@@ -1,9 +1,9 @@
 # ==========================================================
 # Elite Dangerous Launch Suite  — WPF GUI edition ||||||||||
-# v0.6.2 by CMDR Coyote Bongwater  ||||||||||||||||||||||||||
+# by CMDR Coyote Bongwater (and Claude) |||||||||||||
 # ==========================================================
 
-$script:AppVersion = '0.6.2'
+$script:AppVersion = '0.6.5'
 
 # ── 64-bit bootstrap ──────────────────────────────────────
 if (-not [Environment]::Is64BitProcess) {
