@@ -1,7 +1,9 @@
 # ==========================================================
 # Elite Dangerous Launch Suite  — WPF GUI edition ||||||||||
-# v1.0 by CMDR Coyote Bongwater  ||||||||||||||||||||||||||||
+# v0.6.2 by CMDR Coyote Bongwater  ||||||||||||||||||||||||||
 # ==========================================================
+
+$script:AppVersion = '0.6.2'
 
 # ── 64-bit bootstrap ──────────────────────────────────────
 if (-not [Environment]::Is64BitProcess) {
@@ -141,81 +143,10 @@ function Format-CmdrLine { param([string]$Name)
     "C M D R  ·  $Spaced"
 }
 
-# ── Update repo map ───────────────────────────────────────
-$script:UpdaterMap = @{
-    'EDMarketConnector' = @{
-        Repo          = 'EDCD/EDMarketConnector'
-        AssetPattern  = $null
-        HasOwnUpdater = $true
-        ProcessName   = 'EDMarketConnector'
-        DefaultExe    = '%ProgramFiles(x86)%\EDMarketConnector\EDMarketConnector.exe'
-    }
-    'SrvSurvey'         = @{
-        Repo          = 'njthomson/SrvSurvey'
-        AssetPattern  = '\.zip$'
-        HasOwnUpdater = $false
-        ProcessName   = 'SrvSurvey'
-        DefaultExe    = $null   # ClickOnce — discovered dynamically
-    }
-    'OdysseyMaterials'  = @{
-        Repo          = 'jixxed/ed-odyssey-materials-helper'
-        AssetPattern  = $null
-        HasOwnUpdater = $true
-        ProcessName   = 'Elite Dangerous Odyssey Materials Helper'
-        DefaultExe    = '%LOCALAPPDATA%\Elite Dangerous Odyssey Materials Helper Launcher\program\Elite Dangerous Odyssey Materials Helper.exe'
-    }
-    'EDCoPilot'         = @{
-        Repo          = 'Razzafrag/EDCoPilot-Installer'
-        AssetPattern  = '\.msi$'
-        HasOwnUpdater = $false
-        ProcessName   = 'EDCoPilot'
-        DefaultExe    = 'C:\EDCoPilot\EDCoPilot.exe'
-    }
-    'EDHM_UI'           = @{
-        Repo          = 'BlueMystical/EDHM_UI'
-        AssetPattern  = $null
-        HasOwnUpdater = $true
-        ProcessName   = 'EDHM_UI'
-        DefaultExe    = '%ProgramFiles%\EDHM_UI\EDHM_UI.exe'
-    }
-    'opentrack'         = @{
-        Repo          = 'opentrack/opentrack'
-        AssetPattern  = 'win.*setup\.exe$'
-        HasOwnUpdater = $false
-        ProcessName   = 'opentrack'
-        DefaultExe    = '%ProgramFiles%\opentrack\opentrack.exe'
-    }
-}
 
-function Get-InstalledVersion { param([string]$Path)
-    if (-not $Path -or -not (Test-Path $Path)) { return $null }
-    try {
-        $v = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($Path).FileVersion
-        return [Version]$v
-    } catch { return $null }
-}
-
-function Get-VersionFromTag { param([string]$Tag)
-    $s = $Tag -replace '^[vV]',          '' `
-              -replace '^opentrack-',     '' `
-              -replace '^[Rr]elease[-_]', ''
-    try { return [Version]$s } catch { return $null }
-}
-
-function Invoke-GitHubLatestRelease { param([string]$Repo)
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        $H = @{ 'User-Agent' = 'EDLaunchSuite/1.0' }
-        return Invoke-RestMethod `
-            -Uri "https://api.github.com/repos/$Repo/releases/latest" `
-            -Headers $H -EA Stop
-    } catch { return $null }
-}
-
-# ── Background update-check scriptblock ───────────────────
-# Injected vars: $Dispatcher, $LogFile, $LogDocument, $LogBox,
-#                $UpdatesBtn, $UpdaterMap, $DoInstall
-$UpdateScript = {
+# ── Self-version check scriptblock ────────────────────────
+# Injected vars: $Dispatcher, $LogFile, $LogDocument, $LogBox, $AppVersion
+$SelfVersionScript = {
     Add-Type -AssemblyName PresentationFramework, PresentationCore
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -245,147 +176,22 @@ $UpdateScript = {
         })
     }
 
-    function Get-InstalledVersion { param([string]$Path)
-        if (-not $Path -or -not (Test-Path $Path)) { return $null }
-        try {
-            $v = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($Path).FileVersion
-            return [Version]$v
-        } catch { return $null }
+    try {
+        $H = @{ 'User-Agent' = "EDLaunchSuite/$AppVersion" }
+        $Release = Invoke-RestMethod `
+            -Uri 'https://api.github.com/repos/coyotebw/EDLaunchSuite/releases/latest' `
+            -Headers $H -EA Stop
+        $LatestTag = $Release.tag_name -replace '^[vV]', ''
+        $Current   = [Version]$AppVersion
+        $Latest    = try { [Version]$LatestTag } catch { $null }
+        if ($Latest -and $Latest -gt $Current) {
+            UiLog "Update available: EDLaunchSuite v$LatestTag  (running v$AppVersion)" -Lvl Warning
+        } else {
+            UiLog "EDLaunchSuite v$AppVersion — up to date." -Lvl Dim
+        }
+    } catch {
+        # Network unavailable or repo not found — silently skip.
     }
-
-    function Get-VersionFromTag { param([string]$Tag)
-        $s = $Tag -replace '^[vV]',          '' `
-                  -replace '^opentrack-',     '' `
-                  -replace '^[Rr]elease[-_]', ''
-        try { return [Version]$s } catch { return $null }
-    }
-
-    function Invoke-GitHubLatestRelease { param([string]$Repo)
-        try {
-            $H = @{ 'User-Agent' = 'EDLaunchSuite/1.0' }
-            return Invoke-RestMethod `
-                -Uri "https://api.github.com/repos/$Repo/releases/latest" `
-                -Headers $H -EA Stop
-        } catch { return $null }
-    }
-
-    UiLog '── Checking for updates ──' -Lvl Dim
-
-    $TempDir = Join-Path $env:TEMP 'EDLaunchSuite-Updates'
-    if ($DoInstall) { New-Item -ItemType Directory -Path $TempDir -Force | Out-Null }
-
-    foreach ($Entry in $UpdaterMap.GetEnumerator()) {
-        $Name     = $Entry.Key
-        $Info     = $Entry.Value
-        $Repo     = $Info.Repo
-        $HasOwn   = $Info.HasOwnUpdater
-        $Pattern  = $Info.AssetPattern
-        $ProcName = $Info.ProcessName
-        $DefExe   = $Info.DefaultExe
-
-        # Resolve installed exe path
-        $ResolvedPath = if ($DefExe) {
-            [System.Environment]::ExpandEnvironmentVariables($DefExe)
-        } elseif ($Name -eq 'SrvSurvey') {
-            Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Apps\2.0') `
-                -Filter 'SrvSurvey.exe' -Recurse -EA SilentlyContinue |
-                Select-Object -First 1 -ExpandProperty FullName
-        } else { $null }
-
-        $InstalledVer = Get-InstalledVersion $ResolvedPath
-
-        # Query GitHub API
-        $Release = Invoke-GitHubLatestRelease $Repo
-        if (-not $Release) {
-            UiLog "  $Name  ·  could not reach GitHub" -Lvl Dim
-            continue
-        }
-
-        $LatestVer = Get-VersionFromTag $Release.tag_name
-        if (-not $LatestVer) {
-            $InstStr = if ($InstalledVer) { "v$InstalledVer" } else { 'not installed' }
-            UiLog "  $Name  ·  latest: $($Release.tag_name)  ($InstStr)" -Lvl Dim
-            continue
-        }
-
-        if (-not $InstalledVer) {
-            UiLog "  $Name  ·  not installed  (latest: $($Release.tag_name))" -Lvl Dim
-            continue
-        }
-
-        if ($InstalledVer -ge $LatestVer) {
-            UiLog "  $Name  ✓  v$InstalledVer" -Lvl Dim
-            continue
-        }
-
-        # Update available
-        if ($HasOwn) {
-            UiLog "  $Name  ↑  v$InstalledVer  →  $($Release.tag_name)  (updates on next app launch)" -Lvl Warning
-            continue
-        }
-
-        UiLog "  $Name  ↑  v$InstalledVer  →  $($Release.tag_name)" -Lvl Warning
-
-        if (-not $DoInstall) { continue }
-
-        # Skip if process is currently running
-        if ($ProcName -and (Get-Process -Name $ProcName -EA SilentlyContinue)) {
-            UiLog "  $Name  ⚠  close the app first, then run [ UPDATES ] again" -Lvl Warning
-            continue
-        }
-
-        # Find matching release asset
-        $Asset = $Release.assets |
-                 Where-Object { $_.browser_download_url -match $Pattern } |
-                 Select-Object -First 1
-        if (-not $Asset) {
-            UiLog "  $Name  ⚠  no matching release asset found" -Lvl Warning
-            continue
-        }
-
-        # Download
-        $OutFile = Join-Path $TempDir $Asset.name
-        UiLog "  $Name  ↓  downloading $($Asset.name)..." -Lvl Dim
-        try {
-            Invoke-WebRequest -Uri $Asset.browser_download_url `
-                -OutFile $OutFile -UseBasicParsing -EA Stop
-        } catch {
-            UiLog "  $Name  ✗  download failed: $_" -Lvl Error
-            continue
-        }
-
-        # Install
-        UiLog "  $Name  ⚙  installing..." -Lvl Dim
-        try {
-            if ($OutFile -match '\.msi$') {
-                Start-Process msiexec.exe `
-                    -ArgumentList "/i `"$OutFile`" /passive" -Wait -EA Stop
-            } elseif ($OutFile -match '\.zip$') {
-                $ExtDir = Join-Path $TempDir ($Asset.name -replace '\.zip$', '')
-                Expand-Archive -Path $OutFile -DestinationPath $ExtDir -Force
-                $SetupExe = Get-ChildItem $ExtDir -Filter 'setup.exe' `
-                    -Recurse -EA SilentlyContinue | Select-Object -First 1
-                if ($SetupExe) {
-                    Start-Process $SetupExe.FullName -Wait -EA Stop
-                } else {
-                    UiLog "  $Name  ⚠  no setup.exe found in archive" -Lvl Warning
-                    continue
-                }
-            } else {
-                # Assume NSIS — try silent flag
-                Start-Process $OutFile -ArgumentList '/S' -Wait -EA Stop
-            }
-            UiLog "  $Name  ✓  updated to $($Release.tag_name)" -Lvl Success
-        } catch {
-            UiLog "  $Name  ✗  install failed: $_" -Lvl Error
-        }
-    }
-
-    UiLog '── Update check complete ──' -Lvl Dim
-    $Dispatcher.Invoke([Action]{
-        $UpdatesBtn.IsEnabled = $true
-        $UpdatesBtn.Content   = '[ UPDATES ]'
-    })
 }
 
 # ── Main window XAML ──────────────────────────────────────
@@ -419,6 +225,9 @@ $UpdateScript = {
         <TextBlock Name="CmdrLabel"
                    Foreground="#C8860A" FontSize="19"
                    TextAlignment="Center" Margin="0,9,0,0"/>
+        <TextBlock Name="VersionLabel"
+                   Foreground="#3A3A3A" FontSize="13"
+                   TextAlignment="Center" Margin="0,5,0,0"/>
       </StackPanel>
     </Border>
 
@@ -485,12 +294,6 @@ $UpdateScript = {
                 Background="#0D0D0D" Foreground="#555555"
                 BorderBrush="#2A2A2A" BorderThickness="1"
                 FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
-        <Button Name="UpdatesBtn"
-                Content="[ UPDATES ]"
-                Width="158" Height="60" Margin="14,0,0,0"
-                Background="#0D0D0D" Foreground="#555555"
-                BorderBrush="#2A2A2A" BorderThickness="1"
-                FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
       </StackPanel>
     </Border>
   </Grid>
@@ -498,17 +301,17 @@ $UpdateScript = {
 '@
 
 # ── Load window ───────────────────────────────────────────
-$Reader     = [System.Xml.XmlNodeReader]::new($Xaml)
-$Window     = [System.Windows.Markup.XamlReader]::Load($Reader)
-$TitleLabel = $Window.FindName('TitleLabel')
-$CmdrLabel  = $Window.FindName('CmdrLabel')
-$StatusPanel= $Window.FindName('StatusPanel')
-$LogBox     = $Window.FindName('LogBox')
+$Reader       = [System.Xml.XmlNodeReader]::new($Xaml)
+$Window       = [System.Windows.Markup.XamlReader]::Load($Reader)
+$TitleLabel   = $Window.FindName('TitleLabel')
+$CmdrLabel    = $Window.FindName('CmdrLabel')
+$VersionLabel = $Window.FindName('VersionLabel')
+$StatusPanel  = $Window.FindName('StatusPanel')
+$LogBox       = $Window.FindName('LogBox')
 $LaunchBtn    = $Window.FindName('LaunchBtn')
 $SettingsBtn  = $Window.FindName('SettingsBtn')
 $AutoStartChk = $Window.FindName('AutoStartChk')
 $ShutdownBtn  = $Window.FindName('ShutdownBtn')
-$UpdatesBtn   = $Window.FindName('UpdatesBtn')
 $LogDocument  = $LogBox.Document
 $Dispatcher   = $Window.Dispatcher
 
@@ -529,8 +332,8 @@ $Dispatcher.Add_UnhandledException({
 })
 
 # ── Window icon ───────────────────────────────────────────
-$_iconPath = Join-Path $PSScriptRoot 'icon.ico'
-if (Test-Path $_iconPath) {
+$_iconPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'icon.ico' } else { '' }
+if ($_iconPath -and (Test-Path $_iconPath)) {
     try {
         $Window.Icon = [System.Windows.Media.Imaging.BitmapImage]::new(
             [System.Uri]::new($_iconPath))
@@ -755,7 +558,7 @@ $LaunchScript = {
         Start-Process 'steam://open/main'
         Start-Sleep -Seconds 10
     }
-    UiStatus 'Steam' 'Online' '#FFB700'
+    UiStatus 'Steam' 'Online' '#44CC44'
     UiLog 'Steam online.' -Lvl Success
 
     # ── Launch Elite ───────────────────────────────────────
@@ -764,19 +567,12 @@ $LaunchScript = {
     Start-Process "steam://run/$EliteAppId"
     UiLog 'Waiting for EliteDangerous64.exe...  (click PLAY in the Frontier Launcher)'
 
-    $Timeout = (Get-Date).AddSeconds(60)
     $EP = $null
     do {
         Start-Sleep -Seconds 2
         $EP = Get-Process -Name EliteDangerous64 -EA SilentlyContinue |
               Select-Object -First 1
-    } until ($EP -or ((Get-Date) -gt $Timeout))
-
-    if (-not ($null -ne $EP)) {
-        UiStatus 'Elite' 'Failed' '#CC4444'
-        Fail 'Elite Dangerous did not start within 60 seconds.'
-        return
-    }
+    } until ($EP)
 
     UiStatus 'Elite' 'Running' '#FFB700'
     UiLog "Elite: Dangerous online. (PID: $($EP.Id))" -Lvl Success
@@ -789,9 +585,11 @@ $LaunchScript = {
         $Launched = @()
         foreach ($App in $Apps) {
             if (-not $App.Path) { continue }
-            if (Get-Process -Name $App.Process -EA SilentlyContinue) {
+            $ExistingProc = Get-Process -Name $App.Process -EA SilentlyContinue |
+                            Select-Object -First 1
+            if ($ExistingProc) {
                 UiLog "$($App.Name) already running — skipping." -Lvl Dim
-                $Launched += @{ Name = $App.Name; Process = $App.Process }
+                $Launched += @{ Name = $App.Name; Process = $App.Process; PID = $ExistingProc.Id }
                 UiStatus $App.Name 'Online' '#44CC44'
                 continue
             }
@@ -799,7 +597,7 @@ $LaunchScript = {
                 UiLog "Launching $($App.Name)..."
                 UiStatus $App.Name 'Launching…' '#C8860A'
                 $P = Start-Process $App.Path -PassThru -EA Stop
-                $Launched += @{ Name = $App.Name; Process = $App.Process }
+                $Launched += @{ Name = $App.Name; Process = $App.Process; PID = $P.Id }
                 UiStatus $App.Name 'Online' '#44CC44'
                 UiLog "$($App.Name) online. (PID: $($P.Id))" -Lvl Success
             } catch {
@@ -822,10 +620,12 @@ $LaunchScript = {
         UiLog 'Closing third-party tools...'
 
         foreach ($LA in $Launched) {
-            $Running = Get-Process -Name $LA.Process -EA SilentlyContinue
+            $Running = $null
+            if ($LA.PID) { $Running = Get-Process -Id $LA.PID -EA SilentlyContinue }
+            if (-not $Running) { $Running = Get-Process -Name $LA.Process -EA SilentlyContinue }
             if ($Running) {
                 UiLog "Stopping $($LA.Name)..."
-                $Running | Stop-Process -Force
+                $Running | Stop-Process -Force -EA SilentlyContinue
                 UiStatus $LA.Name 'Closed' '#555555'
             }
         }
@@ -916,21 +716,13 @@ $Window.Add_Closed({
         try { $script:LaunchRS.Close()   } catch {}
         try { $script:LaunchRS.Dispose() } catch {}
     }
-    if ($script:UpdatePS) {
-        try { $script:UpdatePS.Stop()    } catch {}
-        try { $script:UpdatePS.Dispose() } catch {}
+    if ($script:VerCheckPS) {
+        try { $script:VerCheckPS.Stop()    } catch {}
+        try { $script:VerCheckPS.Dispose() } catch {}
     }
-    if ($script:UpdateRS) {
-        try { $script:UpdateRS.Close()   } catch {}
-        try { $script:UpdateRS.Dispose() } catch {}
-    }
-    if ($script:StartupUpdatePS) {
-        try { $script:StartupUpdatePS.Stop()    } catch {}
-        try { $script:StartupUpdatePS.Dispose() } catch {}
-    }
-    if ($script:StartupUpdateRS) {
-        try { $script:StartupUpdateRS.Close()   } catch {}
-        try { $script:StartupUpdateRS.Dispose() } catch {}
+    if ($script:VerCheckRS) {
+        try { $script:VerCheckRS.Close()   } catch {}
+        try { $script:VerCheckRS.Dispose() } catch {}
     }
 })
 
@@ -1147,6 +939,7 @@ $SettingsBtn.Add_Click({
             } | ConvertTo-Json -Depth 5 |
                 Set-Content $script:SettingsFile -Encoding UTF8
             Load-Settings
+            Rebuild-StatusRows
             $CmdrLabel.Text = Format-CmdrLine $script:CmdrName
             $Dlg.Close()
         } catch {
@@ -1158,49 +951,10 @@ $SettingsBtn.Add_Click({
     $Dlg.ShowDialog() | Out-Null
 })
 
-# ── Updates button ─────────────────────────────────────────
-$UpdatesBtn.Add_Click({
-    $UpdatesBtn.IsEnabled = $false
-    $UpdatesBtn.Content   = '[ CHECKING… ]'
-    Write-UILog 'Checking for updates...' -Level Dim
-
-    $ISS = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
-    foreach ($Pair in @(
-        @('Dispatcher',  $Dispatcher),
-        @('LogFile',     $script:LogFile),
-        @('LogDocument', $LogDocument),
-        @('LogBox',      $LogBox),
-        @('UpdatesBtn',  $UpdatesBtn),
-        @('UpdaterMap',  $script:UpdaterMap),
-        @('DoInstall',   $true)
-    )) {
-        $ISS.Variables.Add(
-            [System.Management.Automation.Runspaces.SessionStateVariableEntry]::new(
-                $Pair[0], $Pair[1], ''))
-    }
-
-    if ($script:UpdatePS) {
-        try { $script:UpdatePS.Stop()    } catch {}
-        try { $script:UpdatePS.Dispose() } catch {}
-        $script:UpdatePS = $null
-    }
-    if ($script:UpdateRS) {
-        try { $script:UpdateRS.Close()   } catch {}
-        try { $script:UpdateRS.Dispose() } catch {}
-        $script:UpdateRS = $null
-    }
-
-    $script:UpdateRS = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($ISS)
-    $script:UpdateRS.Open()
-    $script:UpdatePS = [System.Management.Automation.PowerShell]::Create()
-    $script:UpdatePS.Runspace = $script:UpdateRS
-    $script:UpdatePS.AddScript($UpdateScript) | Out-Null
-    $script:UpdatePS.BeginInvoke() | Out-Null
-})
-
 # ── Initial load & show ───────────────────────────────────
 Load-Settings
-$CmdrLabel.Text = Format-CmdrLine $script:CmdrName
+$CmdrLabel.Text    = Format-CmdrLine $script:CmdrName
+$VersionLabel.Text = "v$($script:AppVersion)"
 Rebuild-StatusRows
 
 # Restore auto-start checkbox from settings
@@ -1223,27 +977,25 @@ $Window.Add_Loaded({
         })
     }
 
-    # Background update check on startup (check-only, no installs)
-    $ISS_upd = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+    # Background self-version check on startup
+    $ISS_ver = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
     foreach ($Pair in @(
         @('Dispatcher',  $Dispatcher),
         @('LogFile',     $script:LogFile),
         @('LogDocument', $LogDocument),
         @('LogBox',      $LogBox),
-        @('UpdatesBtn',  $UpdatesBtn),
-        @('UpdaterMap',  $script:UpdaterMap),
-        @('DoInstall',   $false)
+        @('AppVersion',  $script:AppVersion)
     )) {
-        $ISS_upd.Variables.Add(
+        $ISS_ver.Variables.Add(
             [System.Management.Automation.Runspaces.SessionStateVariableEntry]::new(
                 $Pair[0], $Pair[1], ''))
     }
-    $script:StartupUpdateRS = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($ISS_upd)
-    $script:StartupUpdateRS.Open()
-    $script:StartupUpdatePS = [System.Management.Automation.PowerShell]::Create()
-    $script:StartupUpdatePS.Runspace = $script:StartupUpdateRS
-    $script:StartupUpdatePS.AddScript($UpdateScript) | Out-Null
-    $script:StartupUpdatePS.BeginInvoke() | Out-Null
+    $script:VerCheckRS = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($ISS_ver)
+    $script:VerCheckRS.Open()
+    $script:VerCheckPS = [System.Management.Automation.PowerShell]::Create()
+    $script:VerCheckPS.Runspace = $script:VerCheckRS
+    $script:VerCheckPS.AddScript($SelfVersionScript) | Out-Null
+    $script:VerCheckPS.BeginInvoke() | Out-Null
 })
 
 Write-UILog 'Elite: Dangerous Launch Suite ready.' -Level Success
