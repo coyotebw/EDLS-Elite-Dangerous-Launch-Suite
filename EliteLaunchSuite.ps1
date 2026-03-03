@@ -100,7 +100,8 @@ function Load-Settings {
         try { $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {}
     }
 
-    # Migrate outdated default paths/process names from earlier versions.
+    # Migrate outdated default values forward so existing settings.json files
+    # stay current without requiring a manual reset.
     $dirty = $false
     foreach ($App in $J.Apps) {
         if ($App.Name -eq 'EDHM_UI') {
@@ -232,10 +233,15 @@ $SelfVersionScript = {
     <!-- Header -->
     <Border Grid.Row="0" BorderBrush="#C8860A" BorderThickness="1,2,1,1"
             Margin="0,0,0,14" Padding="25,18">
-      <TextBlock Name="TitleLabel"
-                 Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
-                 Foreground="#FFB700" FontSize="23"
-                 TextAlignment="Center" FontWeight="Bold"/>
+      <StackPanel>
+        <TextBlock Name="TitleLabel"
+                   Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
+                   Foreground="#FFB700" FontSize="23"
+                   TextAlignment="Center" FontWeight="Bold"/>
+        <TextBlock Name="CmdrLabel"
+                   Foreground="#C8860A" FontSize="19"
+                   TextAlignment="Center" Margin="0,9,0,0"/>
+      </StackPanel>
     </Border>
 
     <!-- Status panel -->
@@ -279,10 +285,10 @@ $SelfVersionScript = {
           <ColumnDefinition Width="*"/>
           <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
-
-        <!-- Left: CMDR info, version, issue link -->
+        <!-- Left: fixed author credit + version + issue link -->
         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-          <TextBlock Name="CmdrLabel" Foreground="#C8860A" FontSize="13"/>
+          <TextBlock Foreground="#555555" FontSize="11"
+                     Text="CMDR Coyote Bongwater  ·  Claude"/>
           <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
             <TextBlock Name="VersionLabel" Foreground="#3A3A3A" FontSize="11"/>
             <TextBlock Foreground="#3A3A3A" FontSize="11" Margin="10,0,0,0">
@@ -290,7 +296,6 @@ $SelfVersionScript = {
             </TextBlock>
           </StackPanel>
         </StackPanel>
-
         <!-- Right: buttons -->
         <StackPanel Grid.Column="1" Orientation="Horizontal">
           <Button Name="ShutdownBtn"
@@ -340,7 +345,6 @@ $ShutdownBtn     = $Window.FindName('ShutdownBtn')
 $LogDocument     = $LogBox.Document
 $Dispatcher      = $Window.Dispatcher
 
-# ── Report-issue hyperlink ────────────────────────────────
 $ReportIssueLink.NavigateUri = [System.Uri]::new('https://github.com/coyotebw/EDLaunchSuite/issues')
 $ReportIssueLink.Add_RequestNavigate({
     param($s, $e); Start-Process $e.Uri.AbsoluteUri; $e.Handled = $true
@@ -431,8 +435,6 @@ function New-StatusRow { param([string]$Key, [string]$Label)
     [System.Windows.Controls.Grid]::SetColumn($NameTB, 1)
     $Grid.Children.Add($NameTB) | Out-Null
 
-    # State text and timer sit in a horizontal StackPanel so the timer
-    # appears immediately adjacent to the status readout.
     $StatePanel = [System.Windows.Controls.StackPanel]::new()
     $StatePanel.Orientation = 'Horizontal'
     [System.Windows.Controls.Grid]::SetColumn($StatePanel, 2)
@@ -774,7 +776,7 @@ $Window.Add_Closed({
     }
 })
 
-# ── Auto-start toggle button ──────────────────────────────
+# ── Auto-start button toggle ──────────────────────────────
 $AutoStartBtn.Add_Click({
     try {
         $script:AutoStart = -not $script:AutoStart
@@ -991,7 +993,7 @@ $SettingsBtn.Add_Click({
                 Set-Content $script:SettingsFile -Encoding UTF8
             Load-Settings
             Rebuild-StatusRows
-            $CmdrLabel.Text = "CMDR · $($script:CmdrName)"
+            $CmdrLabel.Text = Format-CmdrLine $script:CmdrName
             $Dlg.Close()
         } catch {
             [System.Windows.MessageBox]::Show(
@@ -1004,7 +1006,7 @@ $SettingsBtn.Add_Click({
 
 # ── Initial load & show ───────────────────────────────────
 Load-Settings
-$CmdrLabel.Text    = "CMDR · $($script:CmdrName)"
+$CmdrLabel.Text    = Format-CmdrLine $script:CmdrName
 $VersionLabel.Text = "v$($script:AppVersion)"
 Rebuild-StatusRows
 

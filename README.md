@@ -11,7 +11,7 @@ A Windows-based launcher utility for **Elite: Dangerous** that starts the game a
 - Real-time status indicators showing which apps are running
 - Timestamped activity log (UI + file)
 - Automatically closes companion apps when Elite: Dangerous exits
-- Manual **Shutdown** button to kill companion apps at any time
+- Manual **[ SHUTDOWN ]** button to kill companion apps at any time
 - Elapsed session timer
 - Auto-start mode — launches everything when EDLaunchSuite itself opens
 - Settings dialog to add, remove, enable/disable apps and adjust options
@@ -35,39 +35,40 @@ A Windows-based launcher utility for **Elite: Dangerous** that starts the game a
 
 ### Download (recommended)
 
-1. Go to the [Releases page](https://github.com/coyotebw/EDLaunchSuite/releases) and download the latest `EliteLaunchSuite.exe`.
-
-2. Place it anywhere convenient and run it. A default `settings.json` is created automatically on first launch.
-
-3. Open **[ SETTINGS ]** to verify companion app paths — adjust any that are installed in non-standard locations.
-
----
+Download the latest `EliteLaunchSuite.exe` from the [Releases page](https://github.com/coyotebw/EDLaunchSuite/releases). No installation needed — just run the `.exe` and a default `settings.json` is created automatically on first launch. Open **[ SETTINGS ]** to adjust companion app paths if any are installed in non-standard locations.
 
 ### Building from source (manual compilation)
 
-For contributors or anyone who wants to build from the PowerShell source:
-
 1. **Clone** the repository, then open PowerShell in the repo root.
 
-2. **Run the one-time setup script** to configure git hooks and optionally build immediately:
+2. **Run the one-time setup script** to configure git and build the `.exe`:
 
    ```powershell
    .\Setup.ps1
    ```
 
-   This sets `git core.hooksPath` to `.githooks/` so the post-merge hook stays active.
+   This script sets `git core.hooksPath` to `.githooks/` so the post-merge hook is active,
+   then offers to run `Build.ps1` immediately to produce `EliteLaunchSuite.exe`.
 
-3. **To rebuild the `.exe` at any time:**
+3. **Run** `EliteLaunchSuite.exe`. On first launch, a default `settings.json` is created automatically.
 
-   ```powershell
-   .\Build.ps1
-   ```
+4. Open **[ SETTINGS ]** to adjust companion app paths if any are installed in non-standard locations.
 
-   Requires PowerShell 5.1+ and will automatically install the
-   [ps2exe](https://github.com/MScholtes/PS2EXE) module on first run if needed.
+#### Rebuilding manually
 
-4. After running `Setup.ps1` once, every `git pull` automatically recompiles the `.exe`
-   via the `.githooks/post-merge` hook — no manual build step needed.
+To rebuild the `.exe` at any time:
+
+```powershell
+.\Build.ps1
+```
+
+This requires PowerShell 5.1+ and will automatically install the
+[ps2exe](https://github.com/MScholtes/PS2EXE) module on first run if it isn't already present.
+
+#### Automatic rebuild on pull
+
+After running `Setup.ps1` once, every `git pull` — including pulls via **GitHub Desktop** —
+automatically recompiles the `.exe` via the `.githooks/post-merge` hook. No manual build step needed.
 
 > **Note**: The compiled `.exe` is excluded from version control via `.gitignore`.
 > Each developer builds locally from source.
@@ -110,16 +111,16 @@ Settings are stored at:
 
 ## Default Companion Apps
 
-| Name | Process name | Default path |
+| Name | Default Process | Default Path |
 |---|---|---|
 | EDMarketConnector | `EDMarketConnector` | `%ProgramFiles(x86)%\EDMarketConnector\EDMarketConnector.exe` |
-| SrvSurvey | `SrvSurvey` | *(auto-detected via ClickOnce)* |
-| OdysseyMaterials | `Elite Dangerous Odyssey Materials Helper` | `%LOCALAPPDATA%\Elite Dangerous Odyssey Materials Helper Launcher\program\Elite Dangerous Odyssey Materials Helper.exe` |
+| SrvSurvey | `SrvSurvey` | auto-detected via `%LOCALAPPDATA%\Apps\2.0` |
+| OdysseyMaterials | `Elite Dangerous Odyssey Materials Helper` | `%LOCALAPPDATA%\Elite Dangerous Odyssey Materials Helper Launcher\...` |
 | EDCoPilot | `EDCoPilot` | `C:\EDCoPilot\EDCoPilot.exe` |
 | EDHM_UI | `EDHM-UI-V3` | `%LOCALAPPDATA%\EDHM-UI-V3\EDHM-UI-V3.exe` |
 | opentrack | `opentrack` | `%ProgramFiles(x86)%\opentrack\opentrack.exe` |
 
-Paths support `%ENVIRONMENT_VARIABLE%` expansion. If an app is installed elsewhere, update its path in **[ SETTINGS ]**.
+If an app is installed elsewhere, update its path in the **[ SETTINGS ]** dialog.
 
 ---
 
@@ -129,8 +130,8 @@ Paths support `%ENVIRONMENT_VARIABLE%` expansion. If an app is installed elsewhe
 |---|---|
 | **[ LAUNCH ]** | Verifies paths, starts Steam if needed, launches Elite: Dangerous, then launches enabled companion apps with the configured delay |
 | **[ SHUTDOWN ]** | Force-closes all companion apps (does not close Elite: Dangerous) |
+| **[ AUTO-START ]** | Toggle: when active (highlighted), the launch sequence fires automatically each time EDLaunchSuite opens |
 | **[ SETTINGS ]** | Opens the configuration dialog |
-| **[ AUTO-START ]** | Toggle button — when active (gold), the launch sequence fires automatically each time EDLaunchSuite opens |
 
 ---
 
@@ -145,5 +146,5 @@ Paths support `%ENVIRONMENT_VARIABLE%` expansion. If an app is installed elsewhe
 
 ## Notes
 
-- If a companion app is installed in a non-standard location, update its path in Settings. A missing path will be logged and skipped — it will not cause a crash.
+- If a companion app is installed in a non-standard location, update its path in **[ SETTINGS ]**. A missing path will be logged and skipped — it will not cause a crash.
 - The launcher is compiled to an `.exe` via **ps2exe** (see `Build.ps1`). No external GUI tool is required.
