@@ -65,19 +65,19 @@ function Load-Settings {
         },
         [ordered]@{
             Name    = 'EDHM_UI'
-            Process = 'EDHM_UI'
-            Path    = '%ProgramFiles%\EDHM_UI\EDHM_UI.exe'
+            Process = 'EDHM-UI-V3'
+            Path    = '%LOCALAPPDATA%\EDHM-UI-V3\EDHM-UI-V3.exe'
             Enabled = $true
         },
         [ordered]@{
             Name    = 'opentrack'
             Process = 'opentrack'
-            Path    = '%ProgramFiles%\opentrack\opentrack.exe'
+            Path    = '%ProgramFiles(x86)%\opentrack\opentrack.exe'
             Enabled = $true
         }
     )
     $Defaults = [ordered]@{
-        CmdrName           = 'Coyote Bongwater'
+        CmdrName           = "Epstein Didn't Kill Himself"
         LaunchDelaySeconds = 3
         EliteAppId         = 359320
         Apps               = $DefaultApps
@@ -99,6 +99,21 @@ function Load-Settings {
         $J | Add-Member -NotePropertyName Apps -NotePropertyValue $allApps -Force
         try { $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {}
     }
+
+    # Migrate outdated default paths/process names from earlier versions.
+    $dirty = $false
+    foreach ($App in $J.Apps) {
+        if ($App.Name -eq 'EDHM_UI') {
+            if ($App.Process -eq 'EDHM_UI') { $App.Process = 'EDHM-UI-V3'; $dirty = $true }
+            if ($App.Path -eq '%ProgramFiles%\EDHM_UI\EDHM_UI.exe') {
+                $App.Path = '%LOCALAPPDATA%\EDHM-UI-V3\EDHM-UI-V3.exe'; $dirty = $true
+            }
+        }
+        if ($App.Name -eq 'opentrack' -and $App.Path -eq '%ProgramFiles%\opentrack\opentrack.exe') {
+            $App.Path = '%ProgramFiles(x86)%\opentrack\opentrack.exe'; $dirty = $true
+        }
+    }
+    if ($dirty) { try { $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {} }
 
     $script:CmdrName           = if ($J.CmdrName)                     { $J.CmdrName }                else { $Defaults.CmdrName }
     $script:EliteAppId         = if ($null -ne $J.EliteAppId)         { [int]$J.EliteAppId }         else { $Defaults.EliteAppId }
@@ -217,18 +232,10 @@ $SelfVersionScript = {
     <!-- Header -->
     <Border Grid.Row="0" BorderBrush="#C8860A" BorderThickness="1,2,1,1"
             Margin="0,0,0,14" Padding="25,18">
-      <StackPanel>
-        <TextBlock Name="TitleLabel"
-                   Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
-                   Foreground="#FFB700" FontSize="23"
-                   TextAlignment="Center" FontWeight="Bold"/>
-        <TextBlock Name="CmdrLabel"
-                   Foreground="#C8860A" FontSize="19"
-                   TextAlignment="Center" Margin="0,9,0,0"/>
-        <TextBlock Name="VersionLabel"
-                   Foreground="#3A3A3A" FontSize="13"
-                   TextAlignment="Center" Margin="0,5,0,0"/>
-      </StackPanel>
+      <TextBlock Name="TitleLabel"
+                 Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
+                 Foreground="#FFB700" FontSize="23"
+                 TextAlignment="Center" FontWeight="Bold"/>
     </Border>
 
     <!-- Status panel -->
@@ -267,53 +274,77 @@ $SelfVersionScript = {
     <!-- Button bar -->
     <Border Grid.Row="3" BorderBrush="#1E1E1E" BorderThickness="0,1,0,0"
             Padding="0,14,0,0">
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-        <Button Name="LaunchBtn"
-                Content="[ LAUNCH ]"
-                Width="228" Height="60" Margin="0,0,14,0"
-                Background="#1A1100" Foreground="#FFB700"
-                BorderBrush="#C8860A" BorderThickness="1"
-                FontFamily="Consolas" FontSize="23" Cursor="Hand"/>
-        <CheckBox Name="AutoStartChk"
-                  Content="auto-start"
-                  Foreground="#3A3A3A"
-                  FontFamily="Consolas" FontSize="19"
-                  VerticalAlignment="Center"
-                  VerticalContentAlignment="Center"
-                  Margin="0,0,28,0"
-                  Cursor="Hand"/>
-        <Button Name="ShutdownBtn"
-                Content="[ SHUTDOWN ]"
-                Width="210" Height="60" Margin="0,0,25,0"
-                Background="#0D0D0D" Foreground="#555555"
-                BorderBrush="#2A2A2A" BorderThickness="1"
-                FontFamily="Consolas" FontSize="21" Cursor="Hand"/>
-        <Button Name="SettingsBtn"
-                Content="Settings"
-                Width="158" Height="60"
-                Background="#0D0D0D" Foreground="#555555"
-                BorderBrush="#2A2A2A" BorderThickness="1"
-                FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
-      </StackPanel>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left: CMDR info, version, issue link -->
+        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+          <TextBlock Name="CmdrLabel" Foreground="#C8860A" FontSize="13"/>
+          <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+            <TextBlock Name="VersionLabel" Foreground="#3A3A3A" FontSize="11"/>
+            <TextBlock Foreground="#3A3A3A" FontSize="11" Margin="10,0,0,0">
+              <Hyperlink Name="ReportIssueLink" Foreground="#3A3A3A">report issue</Hyperlink>
+            </TextBlock>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Right: buttons -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal">
+          <Button Name="ShutdownBtn"
+                  Content="[ SHUTDOWN ]"
+                  Width="210" Height="60" Margin="0,0,14,0"
+                  Background="#0D0D0D" Foreground="#555555"
+                  BorderBrush="#2A2A2A" BorderThickness="1"
+                  FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
+          <Button Name="AutoStartBtn"
+                  Content="[ AUTO-START ]"
+                  Width="210" Height="60" Margin="0,0,14,0"
+                  Background="#0D0D0D" Foreground="#555555"
+                  BorderBrush="#2A2A2A" BorderThickness="1"
+                  FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
+          <Button Name="SettingsBtn"
+                  Content="[ SETTINGS ]"
+                  Width="200" Height="60" Margin="0,0,14,0"
+                  Background="#0D0D0D" Foreground="#555555"
+                  BorderBrush="#2A2A2A" BorderThickness="1"
+                  FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
+          <Button Name="LaunchBtn"
+                  Content="[ LAUNCH ]"
+                  Width="240" Height="60"
+                  Background="#1A1100" Foreground="#FFB700"
+                  BorderBrush="#C8860A" BorderThickness="2"
+                  FontFamily="Consolas" FontSize="25" FontWeight="Bold" Cursor="Hand"/>
+        </StackPanel>
+      </Grid>
     </Border>
   </Grid>
 </Window>
 '@
 
 # ── Load window ───────────────────────────────────────────
-$Reader       = [System.Xml.XmlNodeReader]::new($Xaml)
-$Window       = [System.Windows.Markup.XamlReader]::Load($Reader)
-$TitleLabel   = $Window.FindName('TitleLabel')
-$CmdrLabel    = $Window.FindName('CmdrLabel')
-$VersionLabel = $Window.FindName('VersionLabel')
-$StatusPanel  = $Window.FindName('StatusPanel')
-$LogBox       = $Window.FindName('LogBox')
-$LaunchBtn    = $Window.FindName('LaunchBtn')
-$SettingsBtn  = $Window.FindName('SettingsBtn')
-$AutoStartChk = $Window.FindName('AutoStartChk')
-$ShutdownBtn  = $Window.FindName('ShutdownBtn')
-$LogDocument  = $LogBox.Document
-$Dispatcher   = $Window.Dispatcher
+$Reader          = [System.Xml.XmlNodeReader]::new($Xaml)
+$Window          = [System.Windows.Markup.XamlReader]::Load($Reader)
+$TitleLabel      = $Window.FindName('TitleLabel')
+$CmdrLabel       = $Window.FindName('CmdrLabel')
+$VersionLabel    = $Window.FindName('VersionLabel')
+$ReportIssueLink = $Window.FindName('ReportIssueLink')
+$StatusPanel     = $Window.FindName('StatusPanel')
+$LogBox          = $Window.FindName('LogBox')
+$LaunchBtn       = $Window.FindName('LaunchBtn')
+$SettingsBtn     = $Window.FindName('SettingsBtn')
+$AutoStartBtn    = $Window.FindName('AutoStartBtn')
+$ShutdownBtn     = $Window.FindName('ShutdownBtn')
+$LogDocument     = $LogBox.Document
+$Dispatcher      = $Window.Dispatcher
+
+# ── Report-issue hyperlink ────────────────────────────────
+$ReportIssueLink.NavigateUri = [System.Uri]::new('https://github.com/coyotebw/EDLaunchSuite/issues')
+$ReportIssueLink.Add_RequestNavigate({
+    param($s, $e); Start-Process $e.Uri.AbsoluteUri; $e.Handled = $true
+})
 
 # ── Dispatcher crash guard ────────────────────────────────
 # Without this, any unhandled exception on the UI thread kills the process
@@ -377,7 +408,7 @@ function New-StatusRow { param([string]$Key, [string]$Label)
     $Grid = [System.Windows.Controls.Grid]::new()
     $Grid.Margin = [System.Windows.Thickness]::new(0,4,0,4)
 
-    foreach ($spec in @(25, 333, 0, 140)) {
+    foreach ($spec in @(25, 333, 0)) {
         $cd = [System.Windows.Controls.ColumnDefinition]::new()
         $cd.Width = if ($spec -eq 0) {
             [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
@@ -400,18 +431,24 @@ function New-StatusRow { param([string]$Key, [string]$Label)
     [System.Windows.Controls.Grid]::SetColumn($NameTB, 1)
     $Grid.Children.Add($NameTB) | Out-Null
 
+    # State text and timer sit in a horizontal StackPanel so the timer
+    # appears immediately adjacent to the status readout.
+    $StatePanel = [System.Windows.Controls.StackPanel]::new()
+    $StatePanel.Orientation = 'Horizontal'
+    [System.Windows.Controls.Grid]::SetColumn($StatePanel, 2)
+
     $StateTB = [System.Windows.Controls.TextBlock]::new()
     $StateTB.Text = '—'; $StateTB.FontSize = 19; $StateTB.VerticalAlignment = 'Center'
     $StateTB.Foreground = Brush '#3A3A3A'
-    [System.Windows.Controls.Grid]::SetColumn($StateTB, 2)
-    $Grid.Children.Add($StateTB) | Out-Null
+    $StatePanel.Children.Add($StateTB) | Out-Null
 
     $TimerTB = [System.Windows.Controls.TextBlock]::new()
     $TimerTB.Text = ''; $TimerTB.FontSize = 19; $TimerTB.VerticalAlignment = 'Center'
-    $TimerTB.HorizontalAlignment = 'Right'; $TimerTB.Foreground = Brush '#555555'
-    [System.Windows.Controls.Grid]::SetColumn($TimerTB, 3)
-    $Grid.Children.Add($TimerTB) | Out-Null
+    $TimerTB.Foreground = Brush '#555555'
+    $TimerTB.Margin = [System.Windows.Thickness]::new(14, 0, 0, 0)
+    $StatePanel.Children.Add($TimerTB) | Out-Null
 
+    $Grid.Children.Add($StatePanel) | Out-Null
     $StatusPanel.Children.Add($Grid) | Out-Null
     $script:StatusRows[$Key] = @{ Dot = $Dot; StateTB = $StateTB; TimerTB = $TimerTB }
 }
@@ -610,8 +647,19 @@ $LaunchScript = {
 
         # ── Monitor ────────────────────────────────────────────
         UiLog 'Monitoring Elite: Dangerous...' -Lvl Dim
+        $NotedOffline = @{}
         while (Get-Process -Id $EP.Id -EA SilentlyContinue) {
             Start-Sleep -Seconds 2
+            foreach ($LA in $Launched) {
+                if ($NotedOffline[$LA.Name]) { continue }
+                $Still = $null
+                if ($LA.PID) { $Still = Get-Process -Id $LA.PID -EA SilentlyContinue }
+                if (-not $Still) { $Still = Get-Process -Name $LA.Process -EA SilentlyContinue }
+                if (-not $Still) {
+                    UiStatus $LA.Name 'Offline' '#555555'
+                    $NotedOffline[$LA.Name] = $true
+                }
+            }
         }
 
         # ── Shutdown ───────────────────────────────────────────
@@ -726,17 +774,20 @@ $Window.Add_Closed({
     }
 })
 
-# ── Auto-start checkbox ───────────────────────────────────
-$AutoStartChk.Add_Checked({
+# ── Auto-start toggle button ──────────────────────────────
+$AutoStartBtn.Add_Click({
     try {
-        $AutoStartChk.Foreground = Brush '#FFB700'
-        Save-AutoStart $true
-    } catch { Write-UILog "Auto-start save error: $_" -Level Warning }
-})
-$AutoStartChk.Add_Unchecked({
-    try {
-        $AutoStartChk.Foreground = Brush '#3A3A3A'
-        Save-AutoStart $false
+        $script:AutoStart = -not $script:AutoStart
+        if ($script:AutoStart) {
+            $AutoStartBtn.Foreground  = Brush '#FFB700'
+            $AutoStartBtn.Background  = Brush '#1A1100'
+            $AutoStartBtn.BorderBrush = Brush '#C8860A'
+        } else {
+            $AutoStartBtn.Foreground  = Brush '#555555'
+            $AutoStartBtn.Background  = Brush '#0D0D0D'
+            $AutoStartBtn.BorderBrush = Brush '#2A2A2A'
+        }
+        Save-AutoStart $script:AutoStart
     } catch { Write-UILog "Auto-start save error: $_" -Level Warning }
 })
 
@@ -940,7 +991,7 @@ $SettingsBtn.Add_Click({
                 Set-Content $script:SettingsFile -Encoding UTF8
             Load-Settings
             Rebuild-StatusRows
-            $CmdrLabel.Text = Format-CmdrLine $script:CmdrName
+            $CmdrLabel.Text = "CMDR · $($script:CmdrName)"
             $Dlg.Close()
         } catch {
             [System.Windows.MessageBox]::Show(
@@ -953,17 +1004,20 @@ $SettingsBtn.Add_Click({
 
 # ── Initial load & show ───────────────────────────────────
 Load-Settings
-$CmdrLabel.Text    = Format-CmdrLine $script:CmdrName
+$CmdrLabel.Text    = "CMDR · $($script:CmdrName)"
 $VersionLabel.Text = "v$($script:AppVersion)"
 Rebuild-StatusRows
 
-# Restore auto-start checkbox from settings
-$AutoStartChk.IsChecked = $script:AutoStart
-if ($script:AutoStart) { $AutoStartChk.Foreground = Brush '#FFB700' }
+# Restore auto-start button state from settings
+if ($script:AutoStart) {
+    $AutoStartBtn.Foreground  = Brush '#FFB700'
+    $AutoStartBtn.Background  = Brush '#1A1100'
+    $AutoStartBtn.BorderBrush = Brush '#C8860A'
+}
 
 # Auto-trigger launch once window is fully rendered
 $Window.Add_Loaded({
-    if ($AutoStartChk.IsChecked) {
+    if ($script:AutoStart) {
         $Dispatcher.BeginInvoke([Action]{
             try {
                 $LaunchBtn.RaiseEvent(

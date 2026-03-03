@@ -33,38 +33,41 @@ A Windows-based launcher utility for **Elite: Dangerous** that starts the game a
 
 ## Installation
 
-### First-time setup (after cloning)
+### Download (recommended)
+
+1. Go to the [Releases page](https://github.com/coyotebw/EDLaunchSuite/releases) and download the latest `EliteLaunchSuite.exe`.
+
+2. Place it anywhere convenient and run it. A default `settings.json` is created automatically on first launch.
+
+3. Open **[ SETTINGS ]** to verify companion app paths — adjust any that are installed in non-standard locations.
+
+---
+
+### Building from source (manual compilation)
+
+For contributors or anyone who wants to build from the PowerShell source:
 
 1. **Clone** the repository, then open PowerShell in the repo root.
 
-2. **Run the one-time setup script** to configure git and build the `.exe`:
+2. **Run the one-time setup script** to configure git hooks and optionally build immediately:
 
    ```powershell
    .\Setup.ps1
    ```
 
-   This script sets `git core.hooksPath` to `.githooks/` so the post-merge hook is active,
-   then offers to run `Build.ps1` immediately to produce `EliteLaunchSuite.exe`.
+   This sets `git core.hooksPath` to `.githooks/` so the post-merge hook stays active.
 
-3. **Run** `EliteLaunchSuite.exe`. On first launch, a default `settings.json` is created automatically.
+3. **To rebuild the `.exe` at any time:**
 
-4. Open **Settings** to adjust companion app paths if any are installed in non-standard locations.
+   ```powershell
+   .\Build.ps1
+   ```
 
-### Building manually
+   Requires PowerShell 5.1+ and will automatically install the
+   [ps2exe](https://github.com/MScholtes/PS2EXE) module on first run if needed.
 
-To rebuild the `.exe` at any time:
-
-```powershell
-.\Build.ps1
-```
-
-This requires PowerShell 5.1+ and will automatically install the
-[ps2exe](https://github.com/MScholtes/PS2EXE) module on first run if it isn't already present.
-
-### Automatic rebuild on pull
-
-After running `Setup.ps1` once, every `git pull` — including pulls via **GitHub Desktop** —
-automatically recompiles the `.exe` via the `.githooks/post-merge` hook. No manual build step needed.
+4. After running `Setup.ps1` once, every `git pull` automatically recompiles the `.exe`
+   via the `.githooks/post-merge` hook — no manual build step needed.
 
 > **Note**: The compiled `.exe` is excluded from version control via `.gitignore`.
 > Each developer builds locally from source.
@@ -107,16 +110,16 @@ Settings are stored at:
 
 ## Default Companion Apps
 
-| Name | Default Process |
-|---|---|
-| EDMarketConnector | `EDMarketConnector` |
-| SrvSurvey | `SrvSurvey` |
-| Elite Dangerous Odyssey Materials Helper | `EdMaterialsHelper` |
-| EDCoPilot | `EDCoPilot` |
-| EDHM_UI | `EDHM_UI` |
-| opentrack | `opentrack` |
+| Name | Process name | Default path |
+|---|---|---|
+| EDMarketConnector | `EDMarketConnector` | `%ProgramFiles(x86)%\EDMarketConnector\EDMarketConnector.exe` |
+| SrvSurvey | `SrvSurvey` | *(auto-detected via ClickOnce)* |
+| OdysseyMaterials | `Elite Dangerous Odyssey Materials Helper` | `%LOCALAPPDATA%\Elite Dangerous Odyssey Materials Helper Launcher\program\Elite Dangerous Odyssey Materials Helper.exe` |
+| EDCoPilot | `EDCoPilot` | `C:\EDCoPilot\EDCoPilot.exe` |
+| EDHM_UI | `EDHM-UI-V3` | `%LOCALAPPDATA%\EDHM-UI-V3\EDHM-UI-V3.exe` |
+| opentrack | `opentrack` | `%ProgramFiles(x86)%\opentrack\opentrack.exe` |
 
-Paths are resolved using standard `%ProgramFiles%` / `%ProgramFiles(x86)%` variables. If an app is installed elsewhere, update its path in the Settings dialog.
+Paths support `%ENVIRONMENT_VARIABLE%` expansion. If an app is installed elsewhere, update its path in **[ SETTINGS ]**.
 
 ---
 
@@ -124,10 +127,10 @@ Paths are resolved using standard `%ProgramFiles%` / `%ProgramFiles(x86)%` varia
 
 | Control | Action |
 |---|---|
-| **LAUNCH** | Verifies paths, starts Steam if needed, launches Elite: Dangerous, then launches enabled companion apps with the configured delay |
-| **SHUTDOWN** | Force-closes all companion apps (does not close Elite: Dangerous) |
-| **Settings** | Opens the configuration dialog |
-| **auto-start** checkbox | When checked, the launch sequence fires automatically each time EDLaunchSuite opens |
+| **[ LAUNCH ]** | Verifies paths, starts Steam if needed, launches Elite: Dangerous, then launches enabled companion apps with the configured delay |
+| **[ SHUTDOWN ]** | Force-closes all companion apps (does not close Elite: Dangerous) |
+| **[ SETTINGS ]** | Opens the configuration dialog |
+| **[ AUTO-START ]** | Toggle button — when active (gold), the launch sequence fires automatically each time EDLaunchSuite opens |
 
 ---
 
