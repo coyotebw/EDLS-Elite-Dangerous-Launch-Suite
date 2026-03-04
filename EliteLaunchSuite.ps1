@@ -216,7 +216,7 @@ $SelfVersionScript = {
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Elite: Dangerous | Launch Suite"
-    Background="#0D0D0D"
+    Background="#080808"
     FontFamily="Consolas"
     Width="1295" Height="1070" MinWidth="648" MinHeight="535"
     ResizeMode="CanResizeWithGrip"
@@ -224,108 +224,120 @@ $SelfVersionScript = {
 
   <Viewbox Stretch="Uniform">
   <Grid Width="1253" Height="1034" Margin="21,18,21,18">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
-    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="5"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
 
-    <!-- Header -->
-    <Border Grid.Row="0" BorderBrush="#C8860A" BorderThickness="1,2,1,1"
-            Margin="0,0,0,14" Padding="25,18">
-      <StackPanel>
-        <TextBlock Name="TitleLabel"
-                   Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
-                   Foreground="#FFB700" FontSize="23"
-                   TextAlignment="Center" FontWeight="Bold"/>
-        <TextBlock Name="CmdrLabel"
-                   Foreground="#C8860A" FontSize="19"
-                   TextAlignment="Center" Margin="0,9,0,0"/>
-      </StackPanel>
-    </Border>
+    <!-- Gold accent sidebar strip -->
+    <Rectangle Grid.Column="0" Fill="#8A5C08"/>
 
-    <!-- Status panel -->
-    <Border Grid.Row="1" BorderBrush="#1E1E1E" BorderThickness="1"
-            Margin="0,0,0,14" Padding="18,14">
-      <StackPanel>
-        <TextBlock Text="  STATUS" Foreground="#3A3A3A" FontSize="18"
-                   Margin="0,0,0,11"/>
-        <StackPanel Name="StatusPanel"/>
-      </StackPanel>
-    </Border>
+    <!-- Main content -->
+    <Grid Grid.Column="1">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
 
-    <!-- Log pane -->
-    <Border Grid.Row="2" BorderBrush="#252525" BorderThickness="1"
-            Margin="0,0,0,14">
-      <Grid>
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="  LOG" Foreground="#3A3A3A" FontSize="18"
-                   Margin="0,11,0,4" Padding="7,0"/>
-        <RichTextBox Name="LogBox" Grid.Row="1"
-                     IsReadOnly="True"
-                     Background="#0D0D0D"
-                     BorderThickness="0"
-                     Padding="14,7"
-                     FontSize="19"
-                     VerticalScrollBarVisibility="Auto"
-                     HorizontalScrollBarVisibility="Disabled">
-          <FlowDocument PageWidth="5000"/>
-        </RichTextBox>
-      </Grid>
-    </Border>
+      <!-- Header card -->
+      <Border Grid.Row="0" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+              CornerRadius="0,6,0,0" Margin="0,0,0,3" Padding="24,20">
+        <StackPanel>
+          <TextBlock Name="TitleLabel"
+                     Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
+                     Foreground="#FFB700" FontSize="23"
+                     TextAlignment="Center" FontWeight="Bold"/>
+          <TextBlock Name="CmdrLabel"
+                     Foreground="#C8860A" FontSize="19"
+                     TextAlignment="Center" Margin="0,8,0,0"/>
+        </StackPanel>
+      </Border>
 
-    <!-- Button bar -->
-    <Border Grid.Row="3" BorderBrush="#1E1E1E" BorderThickness="0,1,0,0"
-            Padding="0,14,0,0">
-      <Grid>
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
-        <!-- Left: fixed author credit + version + issue link -->
-        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-          <TextBlock Foreground="#555555" FontSize="11"
-                     Text="CMDR Coyote Bongwater (and Claude)"/>
-          <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-            <TextBlock Name="VersionLabel" Foreground="#3A3A3A" FontSize="12"/>
-            <TextBlock Foreground="#3A3A3A" FontSize="12" Margin="10,0,0,0">
-              <Hyperlink Name="ReportIssueLink" Foreground="#3A3A3A">report issue</Hyperlink>
-            </TextBlock>
+      <!-- Status card -->
+      <Border Grid.Row="1" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+              Margin="0,0,0,3" Padding="18,14">
+        <StackPanel>
+          <TextBlock Text="S T A T U S" Foreground="#484850" FontSize="11"
+                     Margin="2,0,0,10"/>
+          <StackPanel Name="StatusPanel"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Log card -->
+      <Border Grid.Row="2" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+              Margin="0,0,0,3">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <Border Grid.Row="0" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
+            <TextBlock Text="A C T I V I T Y  L O G" Foreground="#484850" FontSize="11"/>
+          </Border>
+          <RichTextBox Name="LogBox" Grid.Row="1"
+                       IsReadOnly="True"
+                       Background="#080808"
+                       BorderThickness="0"
+                       Padding="18,10"
+                       FontSize="16"
+                       VerticalScrollBarVisibility="Auto"
+                       HorizontalScrollBarVisibility="Disabled">
+            <FlowDocument PageWidth="5000"/>
+          </RichTextBox>
+        </Grid>
+      </Border>
+
+      <!-- Button bar card -->
+      <Border Grid.Row="3" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+              CornerRadius="0,0,6,0" Padding="18,14">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <!-- Left: author credit + version + issue link -->
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Foreground="#484850" FontSize="11"
+                       Text="CMDR Coyote Bongwater (and Claude)"/>
+            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+              <TextBlock Name="VersionLabel" Foreground="#3A3A45" FontSize="12"/>
+              <TextBlock Foreground="#3A3A45" FontSize="12" Margin="10,0,0,0">
+                <Hyperlink Name="ReportIssueLink" Foreground="#3A3A45">report issue</Hyperlink>
+              </TextBlock>
+            </StackPanel>
           </StackPanel>
-        </StackPanel>
-        <!-- Right: buttons -->
-        <StackPanel Grid.Column="1" Orientation="Horizontal">
-          <Button Name="ShutdownBtn"
-                  Content="[ SHUTDOWN ]"
-                  Width="210" Height="60" Margin="0,0,14,0"
-                  Background="#0D0D0D" Foreground="#555555"
-                  BorderBrush="#2A2A2A" BorderThickness="1"
-                  FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
-          <Button Name="AutoStartBtn"
-                  Content="[ AUTO START ]"
-                  Width="210" Height="60" Margin="0,0,14,0"
-                  Background="#0D0D0D" Foreground="#555555"
-                  BorderBrush="#2A2A2A" BorderThickness="1"
-                  FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
-          <Button Name="SettingsBtn"
-                  Content="[ SETTINGS ]"
-                  Width="200" Height="60" Margin="0,0,14,0"
-                  Background="#0D0D0D" Foreground="#555555"
-                  BorderBrush="#2A2A2A" BorderThickness="1"
-                  FontFamily="Consolas" FontSize="19" Cursor="Hand"/>
-          <Button Name="LaunchBtn"
-                  Content="[ LAUNCH ]"
-                  Width="240" Height="60"
-                  Background="#1A1100" Foreground="#FFB700"
-                  BorderBrush="#C8860A" BorderThickness="2"
-                  FontFamily="Consolas" FontSize="25" FontWeight="Bold" Cursor="Hand"/>
-        </StackPanel>
-      </Grid>
-    </Border>
+          <!-- Right: buttons -->
+          <StackPanel Grid.Column="1" Orientation="Horizontal">
+            <Button Name="ShutdownBtn"
+                    Content="SHUTDOWN"
+                    Width="190" Height="52" Margin="0,0,12,0"
+                    Background="#111114" Foreground="#666670"
+                    BorderBrush="#2A2A35" BorderThickness="1"
+                    FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+            <Button Name="AutoStartBtn"
+                    Content="AUTO START"
+                    Width="190" Height="52" Margin="0,0,12,0"
+                    Background="#111114" Foreground="#666670"
+                    BorderBrush="#2A2A35" BorderThickness="1"
+                    FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+            <Button Name="SettingsBtn"
+                    Content="SETTINGS"
+                    Width="180" Height="52" Margin="0,0,12,0"
+                    Background="#111114" Foreground="#666670"
+                    BorderBrush="#2A2A35" BorderThickness="1"
+                    FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+            <Button Name="LaunchBtn"
+                    Content="LAUNCH"
+                    Width="220" Height="52"
+                    Background="#140F00" Foreground="#FFB700"
+                    BorderBrush="#C8860A" BorderThickness="2"
+                    FontFamily="Consolas" FontSize="24" FontWeight="Bold" Cursor="Hand"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
   </Grid>
   </Viewbox>
 </Window>
@@ -426,7 +438,7 @@ if ($_iconPath -and (Test-Path $_iconPath)) {
 $LaunchBtn.Add_MouseEnter({
     try {
         if ($LaunchBtn.IsEnabled) {
-            $LaunchBtn.Background  = Brush '#2A2000'
+            $LaunchBtn.Background  = Brush '#221A00'
             $LaunchBtn.BorderBrush = Brush '#FFB700'
         }
     } catch {}
@@ -434,21 +446,21 @@ $LaunchBtn.Add_MouseEnter({
 $LaunchBtn.Add_MouseLeave({
     try {
         if ($LaunchBtn.IsEnabled) {
-            $LaunchBtn.Background  = Brush '#1A1100'
+            $LaunchBtn.Background  = Brush '#140F00'
             $LaunchBtn.BorderBrush = Brush '#C8860A'
         }
     } catch {}
 })
 $ShutdownBtn.Add_MouseEnter({
     try {
-        $ShutdownBtn.Foreground  = Brush '#CC4444'
-        $ShutdownBtn.BorderBrush = Brush '#663333'
+        $ShutdownBtn.Foreground  = Brush '#DD3333'
+        $ShutdownBtn.BorderBrush = Brush '#551111'
     } catch {}
 })
 $ShutdownBtn.Add_MouseLeave({
     try {
-        $ShutdownBtn.Foreground  = Brush '#555555'
-        $ShutdownBtn.BorderBrush = Brush '#2A2A2A'
+        $ShutdownBtn.Foreground  = Brush '#666670'
+        $ShutdownBtn.BorderBrush = Brush '#2A2A35'
     } catch {}
 })
 
@@ -456,10 +468,17 @@ $ShutdownBtn.Add_MouseLeave({
 $script:StatusRows = @{}
 
 function New-StatusRow { param([string]$Key, [string]$Label)
-    $Grid = [System.Windows.Controls.Grid]::new()
-    $Grid.Margin = [System.Windows.Thickness]::new(0,4,0,4)
+    # Outer card border
+    $Card = [System.Windows.Controls.Border]::new()
+    $Card.Background    = Brush '#111114'
+    $Card.BorderBrush   = Brush '#1C1C22'
+    $Card.BorderThickness = [System.Windows.Thickness]::new(1)
+    $Card.CornerRadius  = [System.Windows.CornerRadius]::new(4)
+    $Card.Margin        = [System.Windows.Thickness]::new(0,0,0,3)
 
-    foreach ($spec in @(25, 333, 0)) {
+    $Grid = [System.Windows.Controls.Grid]::new()
+
+    foreach ($spec in @(4, 300, 0)) {
         $cd = [System.Windows.Controls.ColumnDefinition]::new()
         $cd.Width = if ($spec -eq 0) {
             [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
@@ -469,36 +488,42 @@ function New-StatusRow { param([string]$Key, [string]$Label)
         $Grid.ColumnDefinitions.Add($cd)
     }
 
-    $Dot = [System.Windows.Shapes.Ellipse]::new()
-    $Dot.Width = 14; $Dot.Height = 14; $Dot.VerticalAlignment = 'Center'
-    $Dot.Fill = Brush '#2A2A2A'
+    # Left color bar (Rectangle replaces Ellipse — same .Fill API)
+    $Dot = [System.Windows.Shapes.Rectangle]::new()
+    $Dot.VerticalAlignment = 'Stretch'
+    $Dot.Fill = Brush '#1E1E28'
     [System.Windows.Controls.Grid]::SetColumn($Dot, 0)
     $Grid.Children.Add($Dot) | Out-Null
 
     $NameTB = [System.Windows.Controls.TextBlock]::new()
-    $NameTB.Text = "  $Label"
-    $NameTB.FontSize = 19; $NameTB.VerticalAlignment = 'Center'
+    $NameTB.Text = $Label
+    $NameTB.FontSize = 17; $NameTB.VerticalAlignment = 'Center'
     $NameTB.Foreground = Brush '#C8860A'
+    $NameTB.Margin = [System.Windows.Thickness]::new(14,10,0,10)
     [System.Windows.Controls.Grid]::SetColumn($NameTB, 1)
     $Grid.Children.Add($NameTB) | Out-Null
 
     $StatePanel = [System.Windows.Controls.StackPanel]::new()
     $StatePanel.Orientation = 'Horizontal'
+    $StatePanel.HorizontalAlignment = 'Right'
+    $StatePanel.VerticalAlignment = 'Center'
+    $StatePanel.Margin = [System.Windows.Thickness]::new(0,0,16,0)
     [System.Windows.Controls.Grid]::SetColumn($StatePanel, 2)
 
     $StateTB = [System.Windows.Controls.TextBlock]::new()
-    $StateTB.Text = '—'; $StateTB.FontSize = 19; $StateTB.VerticalAlignment = 'Center'
-    $StateTB.Foreground = Brush '#3A3A3A'
+    $StateTB.Text = '—'; $StateTB.FontSize = 15; $StateTB.VerticalAlignment = 'Center'
+    $StateTB.Foreground = Brush '#3A3A45'
     $StatePanel.Children.Add($StateTB) | Out-Null
 
     $TimerTB = [System.Windows.Controls.TextBlock]::new()
-    $TimerTB.Text = ''; $TimerTB.FontSize = 19; $TimerTB.VerticalAlignment = 'Center'
-    $TimerTB.Foreground = Brush '#555555'
-    $TimerTB.Margin = [System.Windows.Thickness]::new(14, 0, 0, 0)
+    $TimerTB.Text = ''; $TimerTB.FontSize = 13; $TimerTB.VerticalAlignment = 'Center'
+    $TimerTB.Foreground = Brush '#484850'
+    $TimerTB.Margin = [System.Windows.Thickness]::new(12, 0, 0, 0)
     $StatePanel.Children.Add($TimerTB) | Out-Null
 
     $Grid.Children.Add($StatePanel) | Out-Null
-    $StatusPanel.Children.Add($Grid) | Out-Null
+    $Card.Child = $Grid
+    $StatusPanel.Children.Add($Card) | Out-Null
     $script:StatusRows[$Key] = @{ Dot = $Dot; StateTB = $StateTB; TimerTB = $TimerTB }
 }
 
@@ -612,7 +637,7 @@ $LaunchScript = {
             -EA SilentlyContinue
         $Dispatcher.Invoke([Action]{
             $LaunchBtn.IsEnabled = $true
-            $LaunchBtn.Content   = '[ LAUNCH ]'
+            $LaunchBtn.Content   = 'LAUNCH'
         })
     }
 
@@ -705,14 +730,14 @@ $LaunchScript = {
                 if ($LA.PID) { $Still = Get-Process -Id $LA.PID -EA SilentlyContinue }
                 if (-not $Still) { $Still = Get-Process -Name $LA.Process -EA SilentlyContinue }
                 if (-not $Still) {
-                    UiStatus $LA.Name 'Offline' '#555555'
+                    UiStatus $LA.Name 'Offline' '#484850'
                     $NotedOffline[$LA.Name] = $true
                 }
             }
         }
 
         # ── Shutdown ───────────────────────────────────────────
-        UiStatus 'Elite' 'Offline' '#555555' -ClearTimer $true
+        UiStatus 'Elite' 'Offline' '#484850' -ClearTimer $true
         UiLog 'Elite: Dangerous offline.'
         UiLog 'Closing third-party tools...'
 
@@ -723,7 +748,7 @@ $LaunchScript = {
             if ($Running) {
                 UiLog "Stopping $($LA.Name)..."
                 $Running | Stop-Process -Force -EA SilentlyContinue
-                UiStatus $LA.Name 'Closed' '#555555'
+                UiStatus $LA.Name 'Closed' '#484850'
             }
         }
 
@@ -746,7 +771,7 @@ $LaunchScript = {
             $Dispatcher.Invoke([Action]{
                 $ElapsedTimer.Stop()
                 $LaunchBtn.IsEnabled = $true
-                $LaunchBtn.Content   = '[ LAUNCH ]'
+                $LaunchBtn.Content   = 'LAUNCH'
             })
         } catch {}
         $SharedState['EliteStartTime'] = $null
@@ -759,7 +784,7 @@ $LaunchBtn.Add_Click({
     Rebuild-StatusRows
 
     $LaunchBtn.IsEnabled = $false
-    $LaunchBtn.Content   = '[ RUNNING ]'
+    $LaunchBtn.Content   = 'RUNNING'
     Write-UILog 'Launch sequence initiated.' -Level Success
 
     $ISS = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
@@ -829,12 +854,12 @@ $AutoStartBtn.Add_Click({
         $script:AutoStart = -not $script:AutoStart
         if ($script:AutoStart) {
             $AutoStartBtn.Foreground  = Brush '#FFB700'
-            $AutoStartBtn.Background  = Brush '#1A1100'
+            $AutoStartBtn.Background  = Brush '#140F00'
             $AutoStartBtn.BorderBrush = Brush '#C8860A'
         } else {
-            $AutoStartBtn.Foreground  = Brush '#555555'
-            $AutoStartBtn.Background  = Brush '#0D0D0D'
-            $AutoStartBtn.BorderBrush = Brush '#2A2A2A'
+            $AutoStartBtn.Foreground  = Brush '#666670'
+            $AutoStartBtn.Background  = Brush '#111114'
+            $AutoStartBtn.BorderBrush = Brush '#2A2A35'
         }
         Save-AutoStart $script:AutoStart
     } catch { Write-UILog "Auto-start save error: $_" -Level Warning }
@@ -853,9 +878,9 @@ $ShutdownBtn.Add_Click({
                 $Running | Stop-Process -Force -EA SilentlyContinue
                 $row = $script:StatusRows[$App.Name]
                 if ($row) {
-                    $row.Dot.Fill           = Brush '#555555'
+                    $row.Dot.Fill           = Brush '#484850'
                     $row.StateTB.Text       = 'Closed'
-                    $row.StateTB.Foreground = Brush '#555555'
+                    $row.StateTB.Foreground = Brush '#484850'
                 }
             }
         }
@@ -878,94 +903,102 @@ $SettingsBtn.Add_Click({
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Launch Suite — Settings"
-    Background="#0D0D0D" FontFamily="Consolas"
-    Width="600" Height="440"
+    Background="#080808" FontFamily="Consolas"
+    Width="640" Height="480"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterOwner">
 
-  <Grid Margin="16">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
-    </Grid.RowDefinitions>
-
-    <!-- Scalar settings -->
-    <Grid Grid.Row="0" Margin="0,0,0,12">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="160"/>
-        <ColumnDefinition Width="*"/>
-      </Grid.ColumnDefinitions>
+  <Border Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+          CornerRadius="6" Margin="12">
+    <Grid Margin="16">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
 
-      <TextBlock Grid.Row="0" Grid.Column="0" Text="CMDR Name"
-                 Foreground="#555555" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
-      <TextBox Grid.Row="0" Grid.Column="1" Name="CmdrBox"
-               FontSize="11" Background="#1A1A1A" Foreground="#FFB700"
-               BorderBrush="#2A2A2A" CaretBrush="#FFB700" Padding="4,3" Margin="0,4"/>
+      <!-- Section label -->
+      <TextBlock Grid.Row="0" Text="S E T T I N G S" Foreground="#484850" FontSize="11"
+                 Margin="2,0,0,14"/>
 
-      <TextBlock Grid.Row="1" Grid.Column="0" Text="Steam App ID"
-                 Foreground="#555555" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
-      <TextBox Grid.Row="1" Grid.Column="1" Name="AppIdBox"
-               FontSize="11" Background="#1A1A1A" Foreground="#FFB700"
-               BorderBrush="#2A2A2A" CaretBrush="#FFB700" Padding="4,3" Margin="0,4"/>
+      <!-- Scalar settings -->
+      <Grid Grid.Row="1" Margin="0,0,0,12">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="160"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-      <TextBlock Grid.Row="2" Grid.Column="0" Text="Launch Delay (s)"
-                 Foreground="#555555" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
-      <TextBox Grid.Row="2" Grid.Column="1" Name="DelayBox"
-               FontSize="11" Background="#1A1A1A" Foreground="#FFB700"
-               BorderBrush="#2A2A2A" CaretBrush="#FFB700" Padding="4,3" Margin="0,4"/>
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="CMDR Name"
+                   Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
+        <TextBox Grid.Row="0" Grid.Column="1" Name="CmdrBox"
+                 FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
+                 BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Steam App ID"
+                   Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
+        <TextBox Grid.Row="1" Grid.Column="1" Name="AppIdBox"
+                 FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
+                 BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Launch Delay (s)"
+                   Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
+        <TextBox Grid.Row="2" Grid.Column="1" Name="DelayBox"
+                 FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
+                 BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
+      </Grid>
+
+      <!-- Apps grid -->
+      <DataGrid Grid.Row="2" Name="AppsGrid"
+                Background="#0C0C0F" Foreground="#C8860A" FontSize="11"
+                BorderBrush="#252530" BorderThickness="1"
+                GridLinesVisibility="None" HeadersVisibility="Column"
+                AutoGenerateColumns="False"
+                CanUserAddRows="False" CanUserDeleteRows="False"
+                RowBackground="#0C0C0F" AlternatingRowBackground="#111114"
+                SelectionMode="Single">
+        <DataGrid.ColumnHeaderStyle>
+          <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#111114"/>
+            <Setter Property="Foreground" Value="#666670"/>
+            <Setter Property="Padding"    Value="6,4"/>
+            <Setter Property="FontSize"   Value="10"/>
+          </Style>
+        </DataGrid.ColumnHeaderStyle>
+        <DataGrid.Columns>
+          <DataGridCheckBoxColumn Header="On"      Binding="{Binding Enabled}" Width="36"/>
+          <DataGridTextColumn    Header="Name"    Binding="{Binding Name}"    Width="130"/>
+          <DataGridTextColumn    Header="Process" Binding="{Binding Process}" Width="180"/>
+          <DataGridTextColumn    Header="Path"    Binding="{Binding Path}"    Width="*"/>
+        </DataGrid.Columns>
+      </DataGrid>
+
+      <!-- Buttons -->
+      <Grid Grid.Row="3" Margin="0,12,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button Name="AddAppBtn" Content="+ Add" Width="72" Height="30" Margin="0,0,6,0"
+                  Background="#111114" Foreground="#C8860A"
+                  BorderBrush="#252530" BorderThickness="1" Cursor="Hand"/>
+          <Button Name="RemoveAppBtn" Content="- Remove" Width="84" Height="30"
+                  Background="#111114" Foreground="#666670"
+                  BorderBrush="#252530" BorderThickness="1" Cursor="Hand"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <Button Name="SaveBtn" Content="Save" Width="80" Height="30" Margin="0,0,8,0"
+                  Background="#140F00" Foreground="#FFB700"
+                  BorderBrush="#C8860A" BorderThickness="1" Cursor="Hand"/>
+          <Button Name="CancelBtn" Content="Cancel" Width="80" Height="30"
+                  Background="#111114" Foreground="#666670"
+                  BorderBrush="#252530" BorderThickness="1" Cursor="Hand"/>
+        </StackPanel>
+      </Grid>
     </Grid>
-
-    <!-- Apps grid -->
-    <DataGrid Grid.Row="1" Name="AppsGrid"
-              Background="#111111" Foreground="#C8860A" FontSize="11"
-              BorderBrush="#2A2A2A" BorderThickness="1"
-              GridLinesVisibility="None" HeadersVisibility="Column"
-              AutoGenerateColumns="False"
-              CanUserAddRows="False" CanUserDeleteRows="False"
-              RowBackground="#111111" AlternatingRowBackground="#161616"
-              SelectionMode="Single">
-      <DataGrid.ColumnHeaderStyle>
-        <Style TargetType="DataGridColumnHeader">
-          <Setter Property="Background" Value="#1A1A1A"/>
-          <Setter Property="Foreground" Value="#555555"/>
-          <Setter Property="Padding"    Value="4,4"/>
-          <Setter Property="FontSize"   Value="10"/>
-        </Style>
-      </DataGrid.ColumnHeaderStyle>
-      <DataGrid.Columns>
-        <DataGridCheckBoxColumn Header="On"      Binding="{Binding Enabled}" Width="36"/>
-        <DataGridTextColumn    Header="Name"    Binding="{Binding Name}"    Width="130"/>
-        <DataGridTextColumn    Header="Process" Binding="{Binding Process}" Width="180"/>
-        <DataGridTextColumn    Header="Path"    Binding="{Binding Path}"    Width="*"/>
-      </DataGrid.Columns>
-    </DataGrid>
-
-    <!-- Buttons -->
-    <Grid Grid.Row="2" Margin="0,12,0,0">
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-        <Button Name="AddAppBtn" Content="+ Add" Width="72" Height="30" Margin="0,0,6,0"
-                Background="#0D0D0D" Foreground="#C8860A"
-                BorderBrush="#2A2A2A" BorderThickness="1" Cursor="Hand"/>
-        <Button Name="RemoveAppBtn" Content="- Remove" Width="84" Height="30"
-                Background="#0D0D0D" Foreground="#555555"
-                BorderBrush="#2A2A2A" BorderThickness="1" Cursor="Hand"/>
-      </StackPanel>
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-        <Button Name="SaveBtn" Content="Save" Width="80" Height="30" Margin="0,0,8,0"
-                Background="#1A1100" Foreground="#FFB700"
-                BorderBrush="#C8860A" BorderThickness="1" Cursor="Hand"/>
-        <Button Name="CancelBtn" Content="Cancel" Width="80" Height="30"
-                Background="#0D0D0D" Foreground="#555555"
-                BorderBrush="#2A2A2A" BorderThickness="1" Cursor="Hand"/>
-      </StackPanel>
-    </Grid>
-  </Grid>
+  </Border>
 </Window>
 '@
 
@@ -1060,7 +1093,7 @@ Rebuild-StatusRows
 # Restore auto-start button state from settings
 if ($script:AutoStart) {
     $AutoStartBtn.Foreground  = Brush '#FFB700'
-    $AutoStartBtn.Background  = Brush '#1A1100'
+    $AutoStartBtn.Background  = Brush '#140F00'
     $AutoStartBtn.BorderBrush = Brush '#C8860A'
 }
 
