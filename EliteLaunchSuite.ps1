@@ -48,7 +48,7 @@ function Load-Settings {
         [ordered]@{
             Name    = 'SrvSurvey'
             Process = 'SrvSurvey'
-            Path    = $null
+            Path    = 'C:\Users\Andrew\AppData\Local\Apps\2.0\HY5GKY7N.214\DPC60QJN.OC9\srvs..tion_0000000000000000_0002.0000_6851f976136fff83\SrvSurvey.exe'
             Enabled = $true
         },
         [ordered]@{
