@@ -222,122 +222,144 @@ $SelfVersionScript = {
     ResizeMode="CanResizeWithGrip"
     WindowStartupLocation="CenterScreen">
 
+  <Window.Resources>
+    <!-- Diagonal/parallelogram button style.
+         LayoutTransform skews the whole button; ContentPresenter counter-skews
+         so text stays upright.  Height=52 * tan(12deg) ~ 11 px, so buttons use
+         Margin="0,0,-11,0" to make adjacent parallelogram edges share one line. -->
+    <Style x:Key="DiagBtn" TargetType="Button">
+      <Setter Property="LayoutTransform">
+        <Setter.Value><SkewTransform AngleX="12"/></Setter.Value>
+      </Setter>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border Name="Bg"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ContentPresenter.LayoutTransform>
+                  <SkewTransform AngleX="-12"/>
+                </ContentPresenter.LayoutTransform>
+              </ContentPresenter>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="Bg" Property="Opacity" Value="0.35"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+
   <Viewbox Stretch="Uniform">
-  <Grid Width="1253" Height="1034" Margin="21,18,21,18">
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="5"/>
-      <ColumnDefinition Width="*"/>
-    </Grid.ColumnDefinitions>
+  <Grid Width="1253" Height="1034" Margin="10,8,10,8">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
 
-    <!-- Gold accent sidebar strip -->
-    <Rectangle Grid.Column="0" Fill="#8A5C08"/>
+    <!-- Header card -->
+    <Border Grid.Row="0" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+            Margin="0,0,0,3" Padding="24,20">
+      <StackPanel>
+        <TextBlock Name="TitleLabel"
+                   Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
+                   Foreground="#FFB700" FontSize="23"
+                   TextAlignment="Center" FontWeight="Bold"/>
+        <TextBlock Name="CmdrLabel"
+                   Foreground="#C8860A" FontSize="19"
+                   TextAlignment="Center" Margin="0,8,0,0"/>
+      </StackPanel>
+    </Border>
 
-    <!-- Main content -->
-    <Grid Grid.Column="1">
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="*"/>
-        <RowDefinition Height="Auto"/>
-      </Grid.RowDefinitions>
+    <!-- Status card -->
+    <Border Grid.Row="1" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+            Margin="0,0,0,3" Padding="14,12">
+      <StackPanel>
+        <TextBlock Text="S T A T U S" Foreground="#484850" FontSize="11"
+                   Margin="2,0,0,10"/>
+        <WrapPanel Name="StatusPanel" Orientation="Horizontal"/>
+      </StackPanel>
+    </Border>
 
-      <!-- Header card -->
-      <Border Grid.Row="0" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
-              CornerRadius="0,6,0,0" Margin="0,0,0,3" Padding="24,20">
-        <StackPanel>
-          <TextBlock Name="TitleLabel"
-                     Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
-                     Foreground="#FFB700" FontSize="23"
-                     TextAlignment="Center" FontWeight="Bold"/>
-          <TextBlock Name="CmdrLabel"
-                     Foreground="#C8860A" FontSize="19"
-                     TextAlignment="Center" Margin="0,8,0,0"/>
-        </StackPanel>
-      </Border>
+    <!-- Log card -->
+    <Border Grid.Row="2" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+            Margin="0,0,0,3">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
+          <TextBlock Text="A C T I V I T Y  L O G" Foreground="#484850" FontSize="11"/>
+        </Border>
+        <RichTextBox Name="LogBox" Grid.Row="1"
+                     IsReadOnly="True"
+                     Background="#080808"
+                     BorderThickness="0"
+                     Padding="18,10"
+                     FontSize="16"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Disabled">
+          <FlowDocument PageWidth="5000"/>
+        </RichTextBox>
+      </Grid>
+    </Border>
 
-      <!-- Status card -->
-      <Border Grid.Row="1" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
-              Margin="0,0,0,3" Padding="18,14">
-        <StackPanel>
-          <TextBlock Text="S T A T U S" Foreground="#484850" FontSize="11"
-                     Margin="2,0,0,10"/>
-          <StackPanel Name="StatusPanel"/>
-        </StackPanel>
-      </Border>
-
-      <!-- Log card -->
-      <Border Grid.Row="2" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
-              Margin="0,0,0,3">
-        <Grid>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-          </Grid.RowDefinitions>
-          <Border Grid.Row="0" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
-            <TextBlock Text="A C T I V I T Y  L O G" Foreground="#484850" FontSize="11"/>
-          </Border>
-          <RichTextBox Name="LogBox" Grid.Row="1"
-                       IsReadOnly="True"
-                       Background="#080808"
-                       BorderThickness="0"
-                       Padding="18,10"
-                       FontSize="16"
-                       VerticalScrollBarVisibility="Auto"
-                       HorizontalScrollBarVisibility="Disabled">
-            <FlowDocument PageWidth="5000"/>
-          </RichTextBox>
-        </Grid>
-      </Border>
-
-      <!-- Button bar card -->
-      <Border Grid.Row="3" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
-              CornerRadius="0,0,6,0" Padding="18,14">
-        <Grid>
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-          </Grid.ColumnDefinitions>
-          <!-- Left: author credit + version + issue link -->
-          <StackPanel Grid.Column="0" VerticalAlignment="Center">
-            <TextBlock Foreground="#484850" FontSize="11"
-                       Text="CMDR Coyote Bongwater (and Claude)"/>
-            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-              <TextBlock Name="VersionLabel" Foreground="#3A3A45" FontSize="12"/>
-              <TextBlock Foreground="#3A3A45" FontSize="12" Margin="10,0,0,0">
-                <Hyperlink Name="ReportIssueLink" Foreground="#3A3A45">report issue</Hyperlink>
-              </TextBlock>
-            </StackPanel>
+    <!-- Button bar card -->
+    <Border Grid.Row="3" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+            Padding="18,14">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <!-- Left: author credit + version + issue link -->
+        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+          <TextBlock Foreground="#484850" FontSize="11" FontStyle="Italic"
+                     Text="CMDR Coyote Bongwater (and Claude)"/>
+          <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+            <TextBlock Name="VersionLabel" Foreground="#3A3A45" FontSize="12"/>
+            <TextBlock Foreground="#3A3A45" FontSize="12" Margin="10,0,0,0">
+              <Hyperlink Name="ReportIssueLink" Foreground="#3A3A45">report issue</Hyperlink>
+            </TextBlock>
           </StackPanel>
-          <!-- Right: buttons -->
-          <StackPanel Grid.Column="1" Orientation="Horizontal">
-            <Button Name="ShutdownBtn"
-                    Content="SHUTDOWN"
-                    Width="190" Height="52" Margin="0,0,12,0"
-                    Background="#111114" Foreground="#666670"
-                    BorderBrush="#2A2A35" BorderThickness="1"
-                    FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
-            <Button Name="AutoStartBtn"
-                    Content="AUTO START"
-                    Width="190" Height="52" Margin="0,0,12,0"
-                    Background="#111114" Foreground="#666670"
-                    BorderBrush="#2A2A35" BorderThickness="1"
-                    FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
-            <Button Name="SettingsBtn"
-                    Content="SETTINGS"
-                    Width="180" Height="52" Margin="0,0,12,0"
-                    Background="#111114" Foreground="#666670"
-                    BorderBrush="#2A2A35" BorderThickness="1"
-                    FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
-            <Button Name="LaunchBtn"
-                    Content="LAUNCH"
-                    Width="220" Height="52"
-                    Background="#140F00" Foreground="#FFB700"
-                    BorderBrush="#C8860A" BorderThickness="2"
-                    FontFamily="Consolas" FontSize="24" FontWeight="Bold" Cursor="Hand"/>
-          </StackPanel>
-        </Grid>
-      </Border>
-    </Grid>
+        </StackPanel>
+        <!-- Right: diagonal buttons — Margin 0,0,-11,0 closes the parallelogram gap -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal">
+          <Button Name="ShutdownBtn"
+                  Content="SHUTDOWN" Style="{StaticResource DiagBtn}"
+                  Width="190" Height="52" Margin="0,0,-11,0"
+                  Background="#111114" Foreground="#666670"
+                  BorderBrush="#2A2A35" BorderThickness="1"
+                  FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+          <Button Name="AutoStartBtn"
+                  Content="AUTO START" Style="{StaticResource DiagBtn}"
+                  Width="190" Height="52" Margin="0,0,-11,0"
+                  Background="#111114" Foreground="#666670"
+                  BorderBrush="#2A2A35" BorderThickness="1"
+                  FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+          <Button Name="SettingsBtn"
+                  Content="SETTINGS" Style="{StaticResource DiagBtn}"
+                  Width="180" Height="52" Margin="0,0,-11,0"
+                  Background="#111114" Foreground="#666670"
+                  BorderBrush="#2A2A35" BorderThickness="1"
+                  FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+          <Button Name="LaunchBtn"
+                  Content="LAUNCH" Style="{StaticResource DiagBtn}"
+                  Width="220" Height="52"
+                  Background="#140F00" Foreground="#FFB700"
+                  BorderBrush="#C8860A" BorderThickness="2"
+                  FontFamily="Consolas" FontSize="24" FontWeight="Bold" Cursor="Hand"/>
+        </StackPanel>
+      </Grid>
+    </Border>
   </Grid>
   </Viewbox>
 </Window>
@@ -468,61 +490,70 @@ $ShutdownBtn.Add_MouseLeave({
 $script:StatusRows = @{}
 
 function New-StatusRow { param([string]$Key, [string]$Label)
-    # Outer card border
+    $isElite = ($Key -eq 'Elite')
+
+    # Outer card — double-wide for Elite so the timer has room
     $Card = [System.Windows.Controls.Border]::new()
-    $Card.Background    = Brush '#111114'
-    $Card.BorderBrush   = Brush '#1C1C22'
+    $Card.Width           = if ($isElite) { 536 } else { 264 }
+    $Card.Height          = 88
+    $Card.Background      = Brush '#111114'
+    $Card.BorderBrush     = Brush '#1C1C22'
     $Card.BorderThickness = [System.Windows.Thickness]::new(1)
-    $Card.CornerRadius  = [System.Windows.CornerRadius]::new(4)
-    $Card.Margin        = [System.Windows.Thickness]::new(0,0,0,3)
+    $Card.Margin          = [System.Windows.Thickness]::new(0,0,4,4)
+    $Card.Padding         = [System.Windows.Thickness]::new(14,10,14,10)
 
-    $Grid = [System.Windows.Controls.Grid]::new()
-
-    foreach ($spec in @(4, 300, 0)) {
-        $cd = [System.Windows.Controls.ColumnDefinition]::new()
-        $cd.Width = if ($spec -eq 0) {
+    # Inner 3-row grid: label row / status text / secondary text
+    $InnerGrid = [System.Windows.Controls.Grid]::new()
+    foreach ($h in @('Auto', 'Star', 'Auto')) {
+        $rd = [System.Windows.Controls.RowDefinition]::new()
+        $rd.Height = if ($h -eq 'Star') {
             [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
-        } else {
-            [System.Windows.GridLength]::new($spec)
-        }
-        $Grid.ColumnDefinitions.Add($cd)
+        } else { [System.Windows.GridLength]::Auto }
+        $InnerGrid.RowDefinitions.Add($rd)
     }
 
-    # Left color bar (Rectangle replaces Ellipse — same .Fill API)
+    # Row 0: small dot indicator + app name label
+    $LabelRow = [System.Windows.Controls.StackPanel]::new()
+    $LabelRow.Orientation = 'Horizontal'
+    [System.Windows.Controls.Grid]::SetRow($LabelRow, 0)
+
     $Dot = [System.Windows.Shapes.Rectangle]::new()
-    $Dot.VerticalAlignment = 'Stretch'
-    $Dot.Fill = Brush '#1E1E28'
-    [System.Windows.Controls.Grid]::SetColumn($Dot, 0)
-    $Grid.Children.Add($Dot) | Out-Null
+    $Dot.Width = 8; $Dot.Height = 8
+    $Dot.VerticalAlignment = 'Center'
+    $Dot.Margin = [System.Windows.Thickness]::new(0,0,6,0)
+    $Dot.Fill   = Brush '#1E1E28'
+    $LabelRow.Children.Add($Dot) | Out-Null
 
-    $NameTB = [System.Windows.Controls.TextBlock]::new()
-    $NameTB.Text = $Label
-    $NameTB.FontSize = 17; $NameTB.VerticalAlignment = 'Center'
-    $NameTB.Foreground = Brush '#C8860A'
-    $NameTB.Margin = [System.Windows.Thickness]::new(14,10,0,10)
-    [System.Windows.Controls.Grid]::SetColumn($NameTB, 1)
-    $Grid.Children.Add($NameTB) | Out-Null
+    $LabelTB = [System.Windows.Controls.TextBlock]::new()
+    $LabelTB.Text       = $Label.ToUpper()
+    $LabelTB.FontSize   = 10
+    $LabelTB.Foreground = Brush '#484850'
+    $LabelTB.VerticalAlignment = 'Center'
+    $LabelRow.Children.Add($LabelTB) | Out-Null
 
-    $StatePanel = [System.Windows.Controls.StackPanel]::new()
-    $StatePanel.Orientation = 'Horizontal'
-    $StatePanel.HorizontalAlignment = 'Right'
-    $StatePanel.VerticalAlignment = 'Center'
-    $StatePanel.Margin = [System.Windows.Thickness]::new(0,0,16,0)
-    [System.Windows.Controls.Grid]::SetColumn($StatePanel, 2)
+    $InnerGrid.Children.Add($LabelRow) | Out-Null
 
+    # Row 1: main status text (large; bigger + bold for Elite to show the timer prominently)
     $StateTB = [System.Windows.Controls.TextBlock]::new()
-    $StateTB.Text = '—'; $StateTB.FontSize = 15; $StateTB.VerticalAlignment = 'Center'
-    $StateTB.Foreground = Brush '#3A3A45'
-    $StatePanel.Children.Add($StateTB) | Out-Null
+    $StateTB.Text       = '—'
+    $StateTB.FontSize   = if ($isElite) { 28 } else { 20 }
+    $StateTB.FontWeight = if ($isElite) { [System.Windows.FontWeights]::Bold } `
+                                        else { [System.Windows.FontWeights]::Normal }
+    $StateTB.Foreground        = Brush '#3A3A45'
+    $StateTB.VerticalAlignment = 'Bottom'
+    $StateTB.Margin            = [System.Windows.Thickness]::new(0,4,0,2)
+    [System.Windows.Controls.Grid]::SetRow($StateTB, 1)
+    $InnerGrid.Children.Add($StateTB) | Out-Null
 
+    # Row 2: secondary text (elapsed timer for Elite; blank for others by default)
     $TimerTB = [System.Windows.Controls.TextBlock]::new()
-    $TimerTB.Text = ''; $TimerTB.FontSize = 13; $TimerTB.VerticalAlignment = 'Center'
+    $TimerTB.Text       = ''
+    $TimerTB.FontSize   = 11
     $TimerTB.Foreground = Brush '#484850'
-    $TimerTB.Margin = [System.Windows.Thickness]::new(12, 0, 0, 0)
-    $StatePanel.Children.Add($TimerTB) | Out-Null
+    [System.Windows.Controls.Grid]::SetRow($TimerTB, 2)
+    $InnerGrid.Children.Add($TimerTB) | Out-Null
 
-    $Grid.Children.Add($StatePanel) | Out-Null
-    $Card.Child = $Grid
+    $Card.Child = $InnerGrid
     $StatusPanel.Children.Add($Card) | Out-Null
     $script:StatusRows[$Key] = @{ Dot = $Dot; StateTB = $StateTB; TimerTB = $TimerTB }
 }
