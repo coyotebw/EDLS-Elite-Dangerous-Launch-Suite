@@ -28,6 +28,33 @@ A Windows-based launcher utility for **Elite: Dangerous** that starts the game a
 | .NET Framework | 3.0+ (WPF) |
 | Steam | Must be installed; Elite: Dangerous owned and installed |
 | Elite: Dangerous Steam App ID | 359320 (default) |
+| Min-Ed-Launcher | Required to bypass the Frontier launcher (see below) |
+
+---
+
+## Min-Ed-Launcher Setup
+
+EDLaunchSuite uses [min-ed-launcher](https://github.com/rfvgyhn/min-ed-launcher) to launch
+Elite: Dangerous directly, bypassing the Frontier launcher entirely.
+
+### 1. Download
+
+Download the latest `MinEdLauncher.exe` for Windows from the
+[min-ed-launcher releases page](https://github.com/rfvgyhn/min-ed-launcher/releases/latest).
+Save it anywhere convenient (e.g. `C:\Tools\MinEdLauncher\MinEdLauncher.exe`).
+
+### 2. Configure in EDLaunchSuite
+
+1. Open EDLaunchSuite and click **[ SETTINGS ]**.
+2. In the **Min-Ed-Launcher** field, paste the full path to `MinEdLauncher.exe`.
+3. Click **Save**.
+
+When the path is set and the file exists, EDLaunchSuite launches `MinEdLauncher.exe` with
+`/autorun /autoquit`, which starts Elite: Dangerous immediately and closes the launcher once
+the game loads.
+
+If the field is left blank or the path is invalid, EDLaunchSuite falls back to launching via
+the plain Steam URL (`steam://run/359320`) — the Frontier launcher will appear as normal.
 
 ---
 
@@ -88,6 +115,7 @@ Settings are stored at:
 | `CmdrName` | string | Your commander name, shown in the title bar |
 | `LaunchDelaySeconds` | integer | Seconds to wait between launching each companion app |
 | `EliteAppId` | integer | Steam App ID for Elite: Dangerous (default: `359320`) |
+| `MinEdLauncherPath` | string | Full path to `MinEdLauncher.exe`; leave blank to fall back to Steam URL |
 | `AutoStart` | boolean | Automatically trigger the launch sequence on startup |
 | `Apps` | array | List of companion app entries (see below) |
 
