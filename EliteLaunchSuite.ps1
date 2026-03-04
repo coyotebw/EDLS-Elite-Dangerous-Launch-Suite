@@ -650,8 +650,8 @@ $LaunchScript = {
     # ── Launch Elite ───────────────────────────────────────
     UiStatus 'Elite' 'Waiting…' '#C8860A'
     UiLog 'Opening Elite: Dangerous via Steam...'
-    Start-Process "steam://run/$EliteAppId"
-    UiLog 'Waiting for EliteDangerous64.exe...  (click PLAY in the Frontier Launcher)'
+    Start-Process "steam://run/$EliteAppId//-skipFrontierLauncher/"
+    UiLog 'Waiting for EliteDangerous64.exe...'
 
     $EP = $null
     do {
