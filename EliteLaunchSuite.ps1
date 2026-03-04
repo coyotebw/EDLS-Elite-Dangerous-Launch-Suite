@@ -32,11 +32,6 @@ Add-Content -Path $script:LogFile `
     -EA SilentlyContinue
 
 # ── Settings functions ─────────────────────────────────────
-function Test-SteamAvailable {
-    try { $null = Get-Item 'HKCU:\Software\Valve\Steam' -EA Stop; $true }
-    catch { $false }
-}
-
 function Load-Settings {
     $DefaultApps = @(
         [ordered]@{
@@ -48,7 +43,7 @@ function Load-Settings {
         [ordered]@{
             Name    = 'SrvSurvey'
             Process = 'SrvSurvey'
-            Path    = 'C:\Users\Andrew\AppData\Local\Apps\2.0\HY5GKY7N.214\DPC60QJN.OC9\srvs..tion_0000000000000000_0002.0000_6851f976136fff83\SrvSurvey.exe'
+            Path    = ''
             Enabled = $true
         },
         [ordered]@{
@@ -99,22 +94,6 @@ function Load-Settings {
         $J | Add-Member -NotePropertyName Apps -NotePropertyValue $allApps -Force
         try { $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {}
     }
-
-    # Migrate outdated default values forward so existing settings.json files
-    # stay current without requiring a manual reset.
-    $dirty = $false
-    foreach ($App in $J.Apps) {
-        if ($App.Name -eq 'EDHM_UI') {
-            if ($App.Process -eq 'EDHM_UI') { $App.Process = 'EDHM-UI-V3'; $dirty = $true }
-            if ($App.Path -eq '%ProgramFiles%\EDHM_UI\EDHM_UI.exe') {
-                $App.Path = '%LOCALAPPDATA%\EDHM-UI-V3\EDHM-UI-V3.exe'; $dirty = $true
-            }
-        }
-        if ($App.Name -eq 'opentrack' -and $App.Path -eq '%ProgramFiles%\opentrack\opentrack.exe') {
-            $App.Path = '%ProgramFiles(x86)%\opentrack\opentrack.exe'; $dirty = $true
-        }
-    }
-    if ($dirty) { try { $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {} }
 
     $script:CmdrName           = if ($J.CmdrName)                     { $J.CmdrName }                else { $Defaults.CmdrName }
     $script:EliteAppId         = if ($null -ne $J.EliteAppId)         { [int]$J.EliteAppId }         else { $Defaults.EliteAppId }
@@ -366,9 +345,7 @@ $SelfVersionScript = {
 '@
 
 # ── Load window ───────────────────────────────────────────
-$Reader          = [System.Xml.XmlNodeReader]::new($Xaml)
-$Window          = [System.Windows.Markup.XamlReader]::Load($Reader)
-$TitleLabel      = $Window.FindName('TitleLabel')
+$Window          = [System.Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($Xaml))
 $CmdrLabel       = $Window.FindName('CmdrLabel')
 $VersionLabel    = $Window.FindName('VersionLabel')
 $ReportIssueLink = $Window.FindName('ReportIssueLink')
@@ -1033,8 +1010,7 @@ $SettingsBtn.Add_Click({
 </Window>
 '@
 
-    $SR       = [System.Xml.XmlNodeReader]::new($SX)
-    $Dlg      = [System.Windows.Markup.XamlReader]::Load($SR)
+    $Dlg      = [System.Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($SX))
     $Dlg.Owner= $Window
 
     $CmdrBox  = $Dlg.FindName('CmdrBox')
