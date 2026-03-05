@@ -73,7 +73,6 @@ function Load-Settings {
     )
     $Defaults = [ordered]@{
         CmdrName           = "Epstein Didn't Kill Himself"
-        LaunchDelaySeconds = 3
         EliteAppId         = 359320
         Apps               = $DefaultApps
     }
@@ -97,7 +96,6 @@ function Load-Settings {
 
     $script:CmdrName           = if ($J.CmdrName)                     { $J.CmdrName }                else { $Defaults.CmdrName }
     $script:EliteAppId         = if ($null -ne $J.EliteAppId)         { [int]$J.EliteAppId }         else { $Defaults.EliteAppId }
-    $script:LaunchDelaySeconds = if ($null -ne $J.LaunchDelaySeconds) { [int]$J.LaunchDelaySeconds } else { $Defaults.LaunchDelaySeconds }
     $script:AutoStart          = if ($null -ne $J.AutoStart)          { [bool]$J.AutoStart }          else { $false }
 
     $script:Apps = @()
@@ -631,7 +629,7 @@ $ElapsedTimer.Add_Tick({
 
 # ── Background launch scriptblock ─────────────────────────
 # Variables injected via InitialSessionState:
-#   $Dispatcher, $LogFile, $EliteAppId, $LaunchDelaySeconds,
+#   $Dispatcher, $LogFile, $EliteAppId,
 #   $Apps, $StatusRows, $LogDocument, $LogBox,
 #   $LaunchBtn, $ElapsedTimer, $SharedState
 $LaunchScript = {
@@ -760,7 +758,6 @@ $LaunchScript = {
                 UiLog "Failed to launch $($App.Name): $_" -Lvl Warning
                 UiStatus $App.Name 'Failed' '#CC4444'
             }
-            Start-Sleep -Seconds $LaunchDelaySeconds
         }
         UiLog 'All systems nominal.' -Lvl Success
 
@@ -837,7 +834,6 @@ $LaunchBtn.Add_Click({
         @('Dispatcher',         $Dispatcher),
         @('LogFile',            $script:LogFile),
         @('EliteAppId',         $script:EliteAppId),
-        @('LaunchDelaySeconds', $script:LaunchDelaySeconds),
         @('Apps',               $script:Apps),
         @('StatusRows',         $script:StatusRows),
         @('LogDocument',        $LogDocument),
@@ -976,7 +972,6 @@ $SettingsBtn.Add_Click({
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="CMDR NAME"
@@ -988,12 +983,6 @@ $SettingsBtn.Add_Click({
         <TextBlock Grid.Row="1" Grid.Column="0" Text="STEAM APP ID"
                    Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
         <TextBox Grid.Row="1" Grid.Column="1" Name="AppIdBox"
-                 FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
-                 BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
-
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="LAUNCH DELAY (S)"
-                   Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
-        <TextBox Grid.Row="2" Grid.Column="1" Name="DelayBox"
                  FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
                  BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
 
@@ -1053,7 +1042,6 @@ $SettingsBtn.Add_Click({
 
     $CmdrBox  = $Dlg.FindName('CmdrBox')
     $AppIdBox = $Dlg.FindName('AppIdBox')
-    $DelayBox = $Dlg.FindName('DelayBox')
     $AppsGrid = $Dlg.FindName('AppsGrid')
     $AddAppBtn    = $Dlg.FindName('AddAppBtn')
     $RemoveAppBtn = $Dlg.FindName('RemoveAppBtn')
@@ -1062,7 +1050,6 @@ $SettingsBtn.Add_Click({
 
     $CmdrBox.Text  = $script:CmdrName
     $AppIdBox.Text = "$($script:EliteAppId)"
-    $DelayBox.Text = "$($script:LaunchDelaySeconds)"
 
     try {
         $RawJson  = Get-Content $script:SettingsFile -Raw -EA Stop |
@@ -1110,7 +1097,6 @@ $SettingsBtn.Add_Click({
             })
             [ordered]@{
                 CmdrName           = $CmdrBox.Text
-                LaunchDelaySeconds = [int]$DelayBox.Text
                 EliteAppId         = [int]$AppIdBox.Text
                 AutoStart          = $script:AutoStart
                 Apps               = $NewApps
