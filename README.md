@@ -29,17 +29,40 @@ A Windows-based launcher utility for **Elite: Dangerous** that starts the game a
 | PowerShell | 5.1 or later |
 | .NET Framework | 3.0+ (WPF) |
 | Steam | Must be installed; Elite: Dangerous owned and installed |
-| Elite: Dangerous Steam App ID | 359320 (default) |
-| Min-Ed-Launcher | Required to bypass the Frontier launcher (see below) |
+| [Min-Ed-Launcher](https://github.com/rfvgyhn/min-ed-launcher) | Required to bypass the Frontier launcher (see below) |
 
 ---
 
 ## Min-Ed-Launcher Setup (Highly recommended)
 
-The purpose of EDLaunchSuite is, by default, foiled by the Frontier launcher, which forces you to click a few extra times so you have to see the store. We can circumvent this with [min-ed-launcher](https://github.com/rfvgyhn/min-ed-launcher) to launch
-Elite: Dangerous directly, bypassing the Frontier launcher. Min-ed-launcher in turn requires another program called [legendary](https://github.com/derrod/legendary). Don't be daunted by the instructions for setup. A detailed written guide will be forthcoming.
+The purpose of EDLaunchSuite is, by default, foiled by the Frontier launcher, which forces you to wait for their laggy unoptimized launcher and then click a few extra times so you have to see the store. We can circumvent this with [min-ed-launcher](https://github.com/rfvgyhn/min-ed-launcher) to launch
+Elite: Dangerous directly, bypassing the Frontier launcher. Min-ed-launcher in turn requires another program called [legendary](https://github.com/derrod/legendary). Don't be daunted by the instructions! I've written a detailed guide below, and anyway if you don't set this part up it does rather undermine the point of the program. But hey, knock yourself out.
 
-Anyway if you don't have min-ed-launcher to bypass the frontier launcher it does rather undermine the point of the program. But hey, knock yourself out.
+_**NOTE** that this does indeed work for Steam. You'll need to make an epic games account and link your steam to it, but that's all. No installing the epic launcher or anything else._
+
+1. First we will need to install legendary. Download the .exe from [latest release of legendary](https://github.com/derrod/legendary/releases) and put it somewhere that it won't be moved or deleted (i.e. not in downloads). I went with `C:\legendary\legendary.exe`
+
+2. Now we will add legendary to our `%PATH%` Open the start menu and type `env`, then click on "Edit the system environment variables".
+	1. In the window that pops up, click "environment variables" on the bottom right.
+	2. Under 'System Variables' find the variable called 'Path' and click edit.
+	3. Click 'New' at the top right. In the text box that comes up, paste the path to the directory where you saved legendary.exe - so in my case it would be `C:\legendary`
+	4. Click 'ok' on all the dialogs to dismiss. Check to see that we did it right by opening command prompt and typing in `legendary`. It should look like **IMAGE GOES HERE!!!**
+
+3. Next we'll authenticate through legendary. Open a command prompt anywhere and enter `legendary auth`. You'll be prompted to log in through Epic. If you haven't already, first go to [the Epic Games website](https://www.epicgames.com/id/register/guided) and make an account, then connect your steam to it. Once that's done you can log into Epic. We're now done with legendary.
+
+4. Download the zip from the [latest release of Min-Ed-Launcher](https://github.com/rfvgyhn/min-ed-launcher/releases). Open your Elite: Dangerous install directory (from Steam library, right click the game > properties > local files > browse local files). From the zip, place MinEdLauncher.exe in your Elite Dangerous install location so that it's in the same folder as EDLaunch.exe. (MinEdLauncher.Bootstrap is for Epic only and may be ignored.)
+
+5) Now we'll change our launch options through Steam. In your library, right click the game, then click properties. In the *launch options* text box, enter cmd /c "MinEdLauncher.exe %command% /autorun /autoquit" and then close the window.
+
+legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLauncher.exe /autorun /autoquit
+
+
+**INSERT CORRECT INSTRUCTIONS HERE**
+
+
+99) Test that we've done it all correctly by opening the game thru your Steam library. If it boots straight to the main menu and doesn't give you a blurb about logging in to update the game, you're all set!
+
+
 
 ---
 
