@@ -246,7 +246,7 @@ $SelfVersionScript = {
     </Grid.RowDefinitions>
 
     <!-- Header card -->
-    <Border Grid.Row="0" Name="TitleBarCard" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+    <Border Grid.Row="0" Name="TitleBarCard" Background="Transparent" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3" Padding="24,20">
       <StackPanel>
         <TextBlock Name="TitleLabel"
@@ -260,7 +260,7 @@ $SelfVersionScript = {
     </Border>
 
     <!-- Status card -->
-    <Border Grid.Row="1" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+    <Border Grid.Row="1" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3" Padding="14,12">
       <StackPanel>
         <TextBlock Text="S T A T U S" Foreground="#484850" FontSize="11"
@@ -270,7 +270,7 @@ $SelfVersionScript = {
     </Border>
 
     <!-- Log card -->
-    <Border Grid.Row="2" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+    <Border Grid.Row="2" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3">
       <Grid>
         <Grid.RowDefinitions>
@@ -282,7 +282,7 @@ $SelfVersionScript = {
         </Border>
         <RichTextBox Name="LogBox" Grid.Row="1"
                      IsReadOnly="True"
-                     Background="#080808"
+                     Background="#55080808"
                      BorderThickness="0"
                      Padding="18,10"
                      FontSize="16"
@@ -294,7 +294,7 @@ $SelfVersionScript = {
     </Border>
 
     <!-- Button bar card -->
-    <Border Grid.Row="3" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+    <Border Grid.Row="3" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="1"
             Padding="18,14">
       <Grid>
         <Grid.ColumnDefinitions>
@@ -317,25 +317,25 @@ $SelfVersionScript = {
           <Button Name="ShutdownBtn"
                   Content="SHUTDOWN" Style="{StaticResource DiagBtn}"
                   Width="190" Height="52" Margin="0,0,-11,0"
-                  Background="#111114" Foreground="#666670"
+                  Background="#CC111114" Foreground="#666670"
                   BorderBrush="#2A2A35" BorderThickness="1"
                   FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
           <Button Name="AutoStartBtn"
                   Content="AUTO START" Style="{StaticResource DiagBtn}"
                   Width="190" Height="52" Margin="0,0,-11,0"
-                  Background="#111114" Foreground="#666670"
+                  Background="#CC111114" Foreground="#666670"
                   BorderBrush="#2A2A35" BorderThickness="1"
                   FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
           <Button Name="SettingsBtn"
                   Content="SETTINGS" Style="{StaticResource DiagBtn}"
                   Width="180" Height="52" Margin="0,0,-11,0"
-                  Background="#111114" Foreground="#666670"
+                  Background="#CC111114" Foreground="#666670"
                   BorderBrush="#2A2A35" BorderThickness="1"
                   FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
           <Button Name="LaunchBtn"
                   Content="LAUNCH" Style="{StaticResource DiagBtn}"
                   Width="220" Height="52"
-                  Background="#140F00" Foreground="#FFB700"
+                  Background="#CC140F00" Foreground="#FFB700"
                   BorderBrush="#C8860A" BorderThickness="2"
                   FontFamily="Consolas" FontSize="24" FontWeight="Bold" Cursor="Hand"/>
         </StackPanel>
@@ -475,7 +475,7 @@ if (Test-Path $_iconFull) {
 $LaunchBtn.Add_MouseEnter({
     try {
         if ($LaunchBtn.IsEnabled) {
-            $LaunchBtn.Background  = Brush '#221A00'
+            $LaunchBtn.Background  = Brush '#CC221A00'
             $LaunchBtn.BorderBrush = Brush '#FFB700'
         }
     } catch {}
@@ -483,7 +483,7 @@ $LaunchBtn.Add_MouseEnter({
 $LaunchBtn.Add_MouseLeave({
     try {
         if ($LaunchBtn.IsEnabled) {
-            $LaunchBtn.Background  = Brush '#140F00'
+            $LaunchBtn.Background  = Brush '#CC140F00'
             $LaunchBtn.BorderBrush = Brush '#C8860A'
         }
     } catch {}
@@ -511,7 +511,7 @@ function New-StatusRow { param([string]$Key, [string]$Label)
     $Card = [System.Windows.Controls.Border]::new()
     $Card.Width           = if ($isElite) { 536 } else { 264 }
     $Card.Height          = 88
-    $Card.Background      = Brush '#111114'
+    $Card.Background      = Brush '#CC111114'
     $Card.BorderBrush     = Brush '#1C1C22'
     $Card.BorderThickness = [System.Windows.Thickness]::new(1)
     $Card.Margin          = [System.Windows.Thickness]::new(0,0,4,4)
@@ -906,11 +906,11 @@ $AutoStartBtn.Add_Click({
         $script:AutoStart = -not $script:AutoStart
         if ($script:AutoStart) {
             $AutoStartBtn.Foreground  = Brush '#FFB700'
-            $AutoStartBtn.Background  = Brush '#140F00'
+            $AutoStartBtn.Background  = Brush '#CC140F00'
             $AutoStartBtn.BorderBrush = Brush '#C8860A'
         } else {
             $AutoStartBtn.Foreground  = Brush '#666670'
-            $AutoStartBtn.Background  = Brush '#111114'
+            $AutoStartBtn.Background  = Brush '#CC111114'
             $AutoStartBtn.BorderBrush = Brush '#2A2A35'
         }
         Save-AutoStart $script:AutoStart
@@ -1154,7 +1154,7 @@ Rebuild-StatusRows
 # Restore auto-start button state from settings
 if ($script:AutoStart) {
     $AutoStartBtn.Foreground  = Brush '#FFB700'
-    $AutoStartBtn.Background  = Brush '#140F00'
+    $AutoStartBtn.Background  = Brush '#CC140F00'
     $AutoStartBtn.BorderBrush = Brush '#C8860A'
 }
 
