@@ -1,19 +1,18 @@
 # EDLS - Elite: Dangerous Launch Suite
 
-A Windows-based launcher utility for **Elite: Dangerous** that starts the game and all your companion tools in one click — and automatically shuts them down when you're done.
+A launcher utility for **Elite: Dangerous** (Steam/Windows only for now). Starts the game and all your companion tools in one click and automatically shuts them down when you're done.
 <img width="1276" height="1063" alt="image" src="https://github.com/user-attachments/assets/2b150467-3d75-4fea-b940-39668cbb244e" />
 
 ---
 
 ## Features
 
-- One-click launch of Elite: Dangerous via Steam plus up to N companion apps
+- One-click launch of Elite: Dangerous via Steam plus up to N companion apps; bypassing Frontier launcher with [Min-Ed-Launcher](https://github.com/rfvgyhn/min-ed-launcher) (see below)
 - Real-time status indicators showing which apps are running
-- Timestamped activity log (UI + file)
 - Automatically closes companion apps when Elite: Dangerous exits
-- Manual **[ SHUTDOWN ]** button to kill companion apps at any time
-- Auto-start mode — launches everything when EDLaunchSuite itself opens
-- Settings dialog to add, remove, enable/disable apps and adjust options
+- Manual shutdown button to kill companion apps at any time
+- Auto-start mode — launches everything when EDLaunchSuite itself opens (off by default)
+- Configurable- can add, remove, enable/disable apps and adjust options
 - Settings and logs persist in `%LOCALAPPDATA%\EDLaunchSuite\`
 
 ---
