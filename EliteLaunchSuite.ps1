@@ -198,7 +198,7 @@ $SelfVersionScript = {
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Elite: Dangerous | Launch Suite"
     Background="#080808"
-    FontFamily="Consolas"
+    FontFamily="Agency FB"
     Width="1295" Height="1070" MinWidth="648" MinHeight="535"
     ResizeMode="CanResizeWithGrip"
     WindowStartupLocation="CenterScreen">
@@ -263,7 +263,7 @@ $SelfVersionScript = {
     <Border Grid.Row="1" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3" Padding="14,12">
       <StackPanel>
-        <TextBlock Text="S T A T U S" Foreground="#484850" FontSize="11"
+        <TextBlock Text="S T A T U S" Foreground="#8888A0" FontSize="11"
                    Margin="2,0,0,10"/>
         <WrapPanel Name="StatusPanel" Orientation="Horizontal"/>
       </StackPanel>
@@ -278,7 +278,7 @@ $SelfVersionScript = {
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Border Grid.Row="0" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
-          <TextBlock Name="TerminalLabel" Text="T E R M I N A L" Foreground="#484850" FontSize="11"/>
+          <TextBlock Name="TerminalLabel" Text="T E R M I N A L" Foreground="#8888A0" FontSize="11"/>
         </Border>
         <RichTextBox Name="LogBox" Grid.Row="1"
                      IsReadOnly="True"
@@ -302,7 +302,7 @@ $SelfVersionScript = {
           <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         <!-- Left: author credit + version + issue link -->
-        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+        <StackPanel Grid.Column="0" VerticalAlignment="Center" TextElement.FontFamily="Consolas">
           <TextBlock Foreground="#484850" FontSize="11" FontStyle="Italic"
                      Text="by CMDR Coyote Bongwater and (mostly) Claude"/>
           <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
@@ -460,24 +460,6 @@ if ($_b) { $Window.Background = $_b }
 $_b = Load-ImageBrush 'assets\title-bar.png' 'Fill'
 if ($_b) { $TitleBarCard.Background = $_b }
 
-# ── Euro Caps font ────────────────────────────────────────
-$_fontPath = Join-Path $_appDir 'assets\EUROCAPS.TTF'
-if (Test-Path $_fontPath) {
-    try {
-        $EuroCaps = [System.Windows.Media.FontFamily]::new(
-            [System.Uri]::new("file:///" + (Join-Path $_appDir 'assets').Replace('\', '/') + "/"),
-            "#Euro Caps")
-        $TitleLabel.FontFamily    = $EuroCaps
-        $CmdrLabel.FontFamily     = $EuroCaps
-        $TerminalLabel.FontFamily = $EuroCaps
-        $ShutdownBtn.FontFamily   = $EuroCaps
-        $AutoStartBtn.FontFamily  = $EuroCaps
-        $SettingsBtn.FontFamily   = $EuroCaps
-        $LaunchBtn.FontFamily     = $EuroCaps
-    } catch {
-        Add-Content -Path $script:LogFile -Value "[assets] Euro Caps font load failed: $_" -EA SilentlyContinue
-    }
-}
 
 # ── Window icon ───────────────────────────────────────────
 $_iconFull = Join-Path $_appDir 'assets\icon.ico'
@@ -561,7 +543,7 @@ function New-StatusRow { param([string]$Key, [string]$Label)
     $LabelTB = [System.Windows.Controls.TextBlock]::new()
     $LabelTB.Text       = $Label.ToUpper()
     $LabelTB.FontSize   = 10
-    $LabelTB.Foreground = Brush '#484850'
+    $LabelTB.Foreground = Brush '#8888A0'
     $LabelTB.VerticalAlignment = 'Center'
     $LabelRow.Children.Add($LabelTB) | Out-Null
 
@@ -1006,25 +988,25 @@ $SettingsBtn.Add_Click({
           <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="CMDR Name"
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="CMDR NAME"
                    Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
         <TextBox Grid.Row="0" Grid.Column="1" Name="CmdrBox"
                  FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
                  BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="Steam App ID"
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="STEAM APP ID"
                    Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
         <TextBox Grid.Row="1" Grid.Column="1" Name="AppIdBox"
                  FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
                  BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Launch Delay (s)"
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="LAUNCH DELAY (S)"
                    Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
         <TextBox Grid.Row="2" Grid.Column="1" Name="DelayBox"
                  FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
                  BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
 
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="Min-Ed-Launcher"
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="MIN-ED-LAUNCHER"
                    Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
         <TextBox Grid.Row="3" Grid.Column="1" Name="MinEdBox"
                  FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
@@ -1049,28 +1031,28 @@ $SettingsBtn.Add_Click({
           </Style>
         </DataGrid.ColumnHeaderStyle>
         <DataGrid.Columns>
-          <DataGridCheckBoxColumn Header="On"      Binding="{Binding Enabled}" Width="36"/>
-          <DataGridTextColumn    Header="Name"    Binding="{Binding Name}"    Width="130"/>
-          <DataGridTextColumn    Header="Process" Binding="{Binding Process}" Width="180"/>
-          <DataGridTextColumn    Header="Path"    Binding="{Binding Path}"    Width="*"/>
+          <DataGridCheckBoxColumn Header="ON"      Binding="{Binding Enabled}" Width="36"/>
+          <DataGridTextColumn    Header="NAME"    Binding="{Binding Name}"    Width="130"/>
+          <DataGridTextColumn    Header="PROCESS" Binding="{Binding Process}" Width="180"/>
+          <DataGridTextColumn    Header="PATH"    Binding="{Binding Path}"    Width="*"/>
         </DataGrid.Columns>
       </DataGrid>
 
       <!-- Buttons -->
       <Grid Grid.Row="3" Margin="0,12,0,0">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <Button Name="AddAppBtn" Content="+ Add" Width="72" Height="30" Margin="0,0,6,0"
+          <Button Name="AddAppBtn" Content="+ ADD" Width="72" Height="30" Margin="0,0,6,0"
                   Background="#111114" Foreground="#C8860A"
                   BorderBrush="#252530" BorderThickness="1" Cursor="Hand"/>
-          <Button Name="RemoveAppBtn" Content="- Remove" Width="84" Height="30"
+          <Button Name="RemoveAppBtn" Content="- REMOVE" Width="84" Height="30"
                   Background="#111114" Foreground="#666670"
                   BorderBrush="#252530" BorderThickness="1" Cursor="Hand"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-          <Button Name="SaveBtn" Content="Save" Width="80" Height="30" Margin="0,0,8,0"
+          <Button Name="SaveBtn" Content="SAVE" Width="80" Height="30" Margin="0,0,8,0"
                   Background="#140F00" Foreground="#FFB700"
                   BorderBrush="#C8860A" BorderThickness="1" Cursor="Hand"/>
-          <Button Name="CancelBtn" Content="Cancel" Width="80" Height="30"
+          <Button Name="CancelBtn" Content="CANCEL" Width="80" Height="30"
                   Background="#111114" Foreground="#666670"
                   BorderBrush="#252530" BorderThickness="1" Cursor="Hand"/>
         </StackPanel>
@@ -1153,7 +1135,7 @@ $SettingsBtn.Add_Click({
                 Set-Content $script:SettingsFile -Encoding UTF8
             Load-Settings
             Rebuild-StatusRows
-            $CmdrLabel.Text = Format-CmdrLine $script:CmdrName
+            $CmdrLabel.Text = (Format-CmdrLine $script:CmdrName).ToUpper()
             $Dlg.Close()
         } catch {
             [System.Windows.MessageBox]::Show(
