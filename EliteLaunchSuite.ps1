@@ -75,7 +75,6 @@ function Load-Settings {
         CmdrName           = "Epstein Didn't Kill Himself"
         LaunchDelaySeconds = 3
         EliteAppId         = 359320
-        MinEdLauncherPath  = ''
         Apps               = $DefaultApps
     }
 
@@ -100,7 +99,6 @@ function Load-Settings {
     $script:EliteAppId         = if ($null -ne $J.EliteAppId)         { [int]$J.EliteAppId }         else { $Defaults.EliteAppId }
     $script:LaunchDelaySeconds = if ($null -ne $J.LaunchDelaySeconds) { [int]$J.LaunchDelaySeconds } else { $Defaults.LaunchDelaySeconds }
     $script:AutoStart          = if ($null -ne $J.AutoStart)          { [bool]$J.AutoStart }          else { $false }
-    $script:MinEdLauncherPath  = if ($J.MinEdLauncherPath)            { [string]$J.MinEdLauncherPath } else { '' }
 
     $script:Apps = @()
     foreach ($E in $J.Apps) {
@@ -634,7 +632,7 @@ $ElapsedTimer.Add_Tick({
 # ── Background launch scriptblock ─────────────────────────
 # Variables injected via InitialSessionState:
 #   $Dispatcher, $LogFile, $EliteAppId, $LaunchDelaySeconds,
-#   $MinEdLauncherPath, $Apps, $StatusRows, $LogDocument, $LogBox,
+#   $Apps, $StatusRows, $LogDocument, $LogBox,
 #   $LaunchBtn, $ElapsedTimer, $SharedState
 $LaunchScript = {
     Add-Type -AssemblyName PresentationFramework, PresentationCore
@@ -721,13 +719,8 @@ $LaunchScript = {
 
     # ── Launch Elite ───────────────────────────────────────
     UiStatus 'Elite' 'Waiting…' '#C8860A'
-    if ($MinEdLauncherPath -and (Test-Path $MinEdLauncherPath)) {
-        UiLog "Launching via MinEdLauncher: $MinEdLauncherPath"
-        Start-Process $MinEdLauncherPath -ArgumentList '/autorun /autoquit'
-    } else {
-        UiLog 'Opening Elite: Dangerous via Steam...'
-        Start-Process "steam://run/$EliteAppId"
-    }
+    UiLog 'Opening Elite: Dangerous via Steam...'
+    Start-Process "steam://run/$EliteAppId"
     UiLog 'Waiting for EliteDangerous64.exe...'
 
     $EP = $null
@@ -845,7 +838,6 @@ $LaunchBtn.Add_Click({
         @('LogFile',            $script:LogFile),
         @('EliteAppId',         $script:EliteAppId),
         @('LaunchDelaySeconds', $script:LaunchDelaySeconds),
-        @('MinEdLauncherPath',  $script:MinEdLauncherPath),
         @('Apps',               $script:Apps),
         @('StatusRows',         $script:StatusRows),
         @('LogDocument',        $LogDocument),
@@ -985,7 +977,6 @@ $SettingsBtn.Add_Click({
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="CMDR NAME"
@@ -1006,11 +997,6 @@ $SettingsBtn.Add_Click({
                  FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
                  BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
 
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="MIN-ED-LAUNCHER"
-                   Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
-        <TextBox Grid.Row="3" Grid.Column="1" Name="MinEdBox"
-                 FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
-                 BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
       </Grid>
 
       <!-- Apps grid -->
@@ -1068,7 +1054,6 @@ $SettingsBtn.Add_Click({
     $CmdrBox  = $Dlg.FindName('CmdrBox')
     $AppIdBox = $Dlg.FindName('AppIdBox')
     $DelayBox = $Dlg.FindName('DelayBox')
-    $MinEdBox = $Dlg.FindName('MinEdBox')
     $AppsGrid = $Dlg.FindName('AppsGrid')
     $AddAppBtn    = $Dlg.FindName('AddAppBtn')
     $RemoveAppBtn = $Dlg.FindName('RemoveAppBtn')
@@ -1078,7 +1063,6 @@ $SettingsBtn.Add_Click({
     $CmdrBox.Text  = $script:CmdrName
     $AppIdBox.Text = "$($script:EliteAppId)"
     $DelayBox.Text = "$($script:LaunchDelaySeconds)"
-    $MinEdBox.Text = $script:MinEdLauncherPath
 
     try {
         $RawJson  = Get-Content $script:SettingsFile -Raw -EA Stop |
@@ -1128,7 +1112,6 @@ $SettingsBtn.Add_Click({
                 CmdrName           = $CmdrBox.Text
                 LaunchDelaySeconds = [int]$DelayBox.Text
                 EliteAppId         = [int]$AppIdBox.Text
-                MinEdLauncherPath  = $MinEdBox.Text.Trim()
                 AutoStart          = $script:AutoStart
                 Apps               = $NewApps
             } | ConvertTo-Json -Depth 5 |
