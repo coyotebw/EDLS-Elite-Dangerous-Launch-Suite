@@ -278,7 +278,7 @@ $SelfVersionScript = {
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Border Grid.Row="0" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
-          <TextBlock Text="T E R M I N A L" Foreground="#484850" FontSize="11"/>
+          <TextBlock Name="TerminalLabel" Text="T E R M I N A L" Foreground="#484850" FontSize="11"/>
         </Border>
         <RichTextBox Name="LogBox" Grid.Row="1"
                      IsReadOnly="True"
@@ -319,25 +319,25 @@ $SelfVersionScript = {
                   Width="190" Height="52" Margin="0,0,-11,0"
                   Background="#CC111114" Foreground="#666670"
                   BorderBrush="#2A2A35" BorderThickness="1"
-                  FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+                  FontSize="17" Cursor="Hand"/>
           <Button Name="AutoStartBtn"
                   Content="AUTO START" Style="{StaticResource DiagBtn}"
                   Width="190" Height="52" Margin="0,0,-11,0"
                   Background="#CC111114" Foreground="#666670"
                   BorderBrush="#2A2A35" BorderThickness="1"
-                  FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+                  FontSize="17" Cursor="Hand"/>
           <Button Name="SettingsBtn"
                   Content="SETTINGS" Style="{StaticResource DiagBtn}"
                   Width="180" Height="52" Margin="0,0,-11,0"
                   Background="#CC111114" Foreground="#666670"
                   BorderBrush="#2A2A35" BorderThickness="1"
-                  FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+                  FontSize="17" Cursor="Hand"/>
           <Button Name="LaunchBtn"
                   Content="LAUNCH" Style="{StaticResource DiagBtn}"
                   Width="220" Height="52"
                   Background="#CC140F00" Foreground="#FFB700"
                   BorderBrush="#C8860A" BorderThickness="2"
-                  FontFamily="Consolas" FontSize="24" FontWeight="Bold" Cursor="Hand"/>
+                  FontSize="24" FontWeight="Bold" Cursor="Hand"/>
         </StackPanel>
       </Grid>
     </Border>
@@ -459,6 +459,25 @@ if ($_b) { $Window.Background = $_b }
 # ── Title bar background ───────────────────────────────────
 $_b = Load-ImageBrush 'assets\title-bar.png' 'Fill'
 if ($_b) { $TitleBarCard.Background = $_b }
+
+# ── Euro Caps font ────────────────────────────────────────
+$_fontPath = Join-Path $_appDir 'assets\EUROCAPS.TTF'
+if (Test-Path $_fontPath) {
+    try {
+        $EuroCaps = [System.Windows.Media.FontFamily]::new(
+            [System.Uri]::new("file:///" + (Join-Path $_appDir 'assets\').Replace('\', '/')),
+            "#Euro Caps")
+        $TitleLabel.FontFamily    = $EuroCaps
+        $CmdrLabel.FontFamily     = $EuroCaps
+        $TerminalLabel.FontFamily = $EuroCaps
+        $ShutdownBtn.FontFamily   = $EuroCaps
+        $AutoStartBtn.FontFamily  = $EuroCaps
+        $SettingsBtn.FontFamily   = $EuroCaps
+        $LaunchBtn.FontFamily     = $EuroCaps
+    } catch {
+        Add-Content -Path $script:LogFile -Value "[assets] Euro Caps font load failed: $_" -EA SilentlyContinue
+    }
+}
 
 # ── Window icon ───────────────────────────────────────────
 $_iconFull = Join-Path $_appDir 'assets\icon.ico'
