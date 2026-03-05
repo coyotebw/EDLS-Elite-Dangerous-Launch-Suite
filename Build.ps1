@@ -26,25 +26,13 @@ try {
     $OutputExe = Join-Path $RepoRoot 'EliteLaunchSuite.exe'
     $IconFile  = Join-Path $RepoRoot 'assets\icon.ico'
 
-    # ── Check the output EXE isn't locked by a running process ────────────────
-    if (Test-Path $OutputExe) {
-        try {
-            $stream = [System.IO.File]::Open($OutputExe,
-                [System.IO.FileMode]::Open,
-                [System.IO.FileAccess]::ReadWrite,
-                [System.IO.FileShare]::None)
-            $stream.Close()
-        } catch {
-            throw "EliteLaunchSuite.exe is locked by another process (is it still running?). Close it and try again."
-        }
-    }
-
-    # ── Extract version from $script:AppVersion = 'x.y.z' ────────────────────
+    # ── Extract version from the script header comment ────────────────────────
+    # Expects a line like:  # v1.0 by CMDR ...
     $HeaderLine = (Get-Content $SourcePs1 -TotalCount 10) |
-                  Where-Object { $_ -match "AppVersion\s*=\s*'(\d+\.\d+(?:\.\d+)?)'" } |
+                  Where-Object { $_ -match 'v(\d+\.\d+(?:\.\d+)?)' } |
                   Select-Object -First 1
 
-    if ($HeaderLine -and $HeaderLine -match "AppVersion\s*=\s*'(\d+\.\d+(?:\.\d+)?)'") {
+    if ($HeaderLine -and $HeaderLine -match 'v(\d+\.\d+(?:\.\d+)?)') {
         $VersionRaw = $Matches[1]
     } else {
         $VersionRaw = $null
@@ -83,7 +71,6 @@ try {
     Write-Host "Compiling..." -ForegroundColor Cyan
 
     try {
-        $ps2exeErrors = @()
         Invoke-ps2exe `
             -inputFile   $SourcePs1 `
             -outputFile  $OutputExe `
@@ -92,15 +79,7 @@ try {
             -title       "Elite Launch Suite" `
             -description "Elite Dangerous Launcher" `
             -company     "coyotebw" `
-            -version     $BuildVersion `
-            -ErrorVariable ps2exeErrors
-
-        if ($ps2exeErrors.Count -gt 0) {
-            foreach ($err in $ps2exeErrors) {
-                Write-Host "  ps2exe error: $err" -ForegroundColor Red
-            }
-            throw "ps2exe reported $($ps2exeErrors.Count) error(s)."
-        }
+            -version     $BuildVersion
 
         if (Test-Path $OutputExe) {
             $SizeKB = [math]::Round((Get-Item $OutputExe).Length / 1KB, 1)
