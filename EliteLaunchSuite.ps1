@@ -427,35 +427,48 @@ $Dispatcher.Add_UnhandledException({
     $e.Handled = $true
 })
 
-# ── Window background ─────────────────────────────────────
-$_winBgPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'assets\window-bg.png' } else { '' }
-if ($_winBgPath -and (Test-Path $_winBgPath)) {
-    try {
-        $bmp   = [System.Windows.Media.Imaging.BitmapImage]::new([System.Uri]::new($_winBgPath))
-        $brush = [System.Windows.Media.ImageBrush]::new($bmp)
-        $brush.Stretch = [System.Windows.Media.Stretch]::UniformToFill
-        $Window.Background = $brush
-    } catch {}
+# ── Resolve app directory (reliable in both .ps1 and ps2exe .exe) ────────────
+$_appDir = if ($PSScriptRoot) { $PSScriptRoot } else {
+    [System.IO.Path]::GetDirectoryName(
+        [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName)
 }
+
+# ── Asset loader helper ───────────────────────────────────
+function Load-ImageBrush([string]$RelPath, [string]$Stretch) {
+    $full = Join-Path $_appDir $RelPath
+    if (-not (Test-Path $full)) {
+        Add-Content -Path $script:LogFile -Value "[assets] not found: $full" -EA SilentlyContinue
+        return $null
+    }
+    try {
+        $uri   = [System.Uri]::new($full, [System.UriKind]::Absolute)
+        $bmp   = [System.Windows.Media.Imaging.BitmapImage]::new($uri)
+        $brush = [System.Windows.Media.ImageBrush]::new($bmp)
+        $brush.Stretch = [System.Windows.Media.Stretch]$Stretch
+        return $brush
+    } catch {
+        Add-Content -Path $script:LogFile -Value "[assets] failed to load ${RelPath}: $_" -EA SilentlyContinue
+        return $null
+    }
+}
+
+# ── Window background ─────────────────────────────────────
+$_b = Load-ImageBrush 'assets\window-bg.png' 'UniformToFill'
+if ($_b) { $Window.Background = $_b }
 
 # ── Title bar background ───────────────────────────────────
-$_titleBgPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'assets\title-bar.png' } else { '' }
-if ($_titleBgPath -and (Test-Path $_titleBgPath)) {
-    try {
-        $bmp   = [System.Windows.Media.Imaging.BitmapImage]::new([System.Uri]::new($_titleBgPath))
-        $brush = [System.Windows.Media.ImageBrush]::new($bmp)
-        $brush.Stretch = [System.Windows.Media.Stretch]::Fill
-        $TitleBarCard.Background = $brush
-    } catch {}
-}
+$_b = Load-ImageBrush 'assets\title-bar.png' 'Fill'
+if ($_b) { $TitleBarCard.Background = $_b }
 
 # ── Window icon ───────────────────────────────────────────
-$_iconPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'assets\icon.ico' } else { '' }
-if ($_iconPath -and (Test-Path $_iconPath)) {
+$_iconFull = Join-Path $_appDir 'assets\icon.ico'
+if (Test-Path $_iconFull) {
     try {
         $Window.Icon = [System.Windows.Media.Imaging.BitmapImage]::new(
-            [System.Uri]::new($_iconPath))
-    } catch {}
+            [System.Uri]::new($_iconFull, [System.UriKind]::Absolute))
+    } catch {
+        Add-Content -Path $script:LogFile -Value "[assets] failed to load icon: $_" -EA SilentlyContinue
+    }
 }
 
 # ── Button hover effects ──────────────────────────────────
