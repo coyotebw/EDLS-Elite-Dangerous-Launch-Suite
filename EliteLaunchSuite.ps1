@@ -270,19 +270,19 @@ $SelfVersionScript = {
     </Border>
 
     <!-- Log card -->
-    <Border Grid.Row="2" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="1"
+    <Border Grid.Row="2" Background="Transparent" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3">
       <Grid>
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <Border Grid.Row="0" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
-          <TextBlock Text="A C T I V I T Y  L O G" Foreground="#484850" FontSize="11"/>
+        <Border Grid.Row="0" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
+          <TextBlock Text="T E R M I N A L" Foreground="#484850" FontSize="11"/>
         </Border>
         <RichTextBox Name="LogBox" Grid.Row="1"
                      IsReadOnly="True"
-                     Background="#55080808"
+                     Background="Transparent"
                      BorderThickness="0"
                      Padding="18,10"
                      FontSize="16"
