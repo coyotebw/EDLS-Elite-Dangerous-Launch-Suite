@@ -3,8 +3,6 @@
 A Windows-based launcher utility for **Elite: Dangerous** that starts the game and all your companion tools in one click — and automatically shuts them down when you're done.
 <img width="1276" height="1063" alt="image" src="https://github.com/user-attachments/assets/2b150467-3d75-4fea-b940-39668cbb244e" />
 
-
-
 ---
 
 ## Features
@@ -19,6 +17,9 @@ A Windows-based launcher utility for **Elite: Dangerous** that starts the game a
 - Settings and logs persist in `%LOCALAPPDATA%\EDLaunchSuite\`
 
 ---
+
+<img width="1277" height="1060" alt="image" src="https://github.com/user-attachments/assets/d6de0e16-ae4e-412c-87cc-a7585089a255" />
+
 
 ## Requirements
 
