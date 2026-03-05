@@ -244,21 +244,17 @@ $SelfVersionScript = {
     <!-- Header card -->
     <Border Grid.Row="0" Name="TitleBarCard" Background="Transparent" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3" Padding="24,12">
-      <Grid VerticalAlignment="Center">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto"/>
-          <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        <Image Grid.Column="0" Name="OutpostImage" Height="64" Margin="0,0,16,0" VerticalAlignment="Center"/>
-        <TextBlock Grid.Column="1" Name="TitleLabel"
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Image Name="OutpostImage" Height="64" Margin="0,0,16,0" VerticalAlignment="Center"/>
+        <TextBlock Name="TitleLabel"
                    Text="◆ ELITE: DANGEROUS · LAUNCH SUITE ◆"
                    Foreground="#FFB700" FontSize="38"
-                   VerticalAlignment="Center" TextAlignment="Center" FontWeight="Bold"/>
-        <TextBlock Grid.Column="1" Name="CmdrLabel"
+                   VerticalAlignment="Center" FontWeight="Bold"/>
+        <TextBlock Name="CmdrLabel"
                    Foreground="#C8860A" FontSize="19"
-                   TextAlignment="Center" Margin="0,8,0,0"
+                   Margin="0,8,0,0"
                    Visibility="Collapsed"/>
-      </Grid>
+      </StackPanel>
     </Border>
 
     <!-- Status card -->
