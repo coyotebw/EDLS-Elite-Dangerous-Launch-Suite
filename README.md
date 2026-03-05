@@ -1,4 +1,4 @@
-# EDLaunchSuite
+# EDLS - Elite: Dangerous Launch Suite
 
 A Windows-based launcher utility for **Elite: Dangerous** that starts the game and all your companion tools in one click — and automatically shuts them down when you're done.
 
