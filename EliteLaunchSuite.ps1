@@ -263,7 +263,7 @@ $SelfVersionScript = {
     <Border Grid.Row="1" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3" Padding="14,12">
       <StackPanel>
-        <TextBlock Text="S T A T U S" Foreground="#484850" FontSize="11"
+        <TextBlock Text="S T A T U S" Foreground="#8888A0" FontSize="11"
                    Margin="2,0,0,10"/>
         <WrapPanel Name="StatusPanel" Orientation="Horizontal"/>
       </StackPanel>
@@ -278,7 +278,7 @@ $SelfVersionScript = {
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Border Grid.Row="0" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
-          <TextBlock Name="TerminalLabel" Text="T E R M I N A L" Foreground="#484850" FontSize="11"/>
+          <TextBlock Name="TerminalLabel" Text="T E R M I N A L" Foreground="#8888A0" FontSize="11"/>
         </Border>
         <RichTextBox Name="LogBox" Grid.Row="1"
                      IsReadOnly="True"
@@ -543,7 +543,7 @@ function New-StatusRow { param([string]$Key, [string]$Label)
     $LabelTB = [System.Windows.Controls.TextBlock]::new()
     $LabelTB.Text       = $Label.ToUpper()
     $LabelTB.FontSize   = 10
-    $LabelTB.Foreground = Brush '#484850'
+    $LabelTB.Foreground = Brush '#8888A0'
     $LabelTB.VerticalAlignment = 'Center'
     $LabelRow.Children.Add($LabelTB) | Out-Null
 
@@ -956,7 +956,7 @@ $SettingsBtn.Add_Click({
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Launch Suite — Settings"
-    Background="#080808" FontFamily="Agency FB"
+    Background="#080808" FontFamily="Consolas"
     Width="640" Height="480"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterOwner">
