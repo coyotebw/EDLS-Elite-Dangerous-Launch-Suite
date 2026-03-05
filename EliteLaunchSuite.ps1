@@ -246,7 +246,7 @@ $SelfVersionScript = {
     </Grid.RowDefinitions>
 
     <!-- Header card -->
-    <Border Grid.Row="0" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+    <Border Grid.Row="0" Name="TitleBarCard" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3" Padding="24,20">
       <StackPanel>
         <TextBlock Name="TitleLabel"
@@ -357,6 +357,7 @@ $LaunchBtn       = $Window.FindName('LaunchBtn')
 $SettingsBtn     = $Window.FindName('SettingsBtn')
 $AutoStartBtn    = $Window.FindName('AutoStartBtn')
 $ShutdownBtn     = $Window.FindName('ShutdownBtn')
+$TitleBarCard    = $Window.FindName('TitleBarCard')
 $LogDocument     = $LogBox.Document
 $Dispatcher      = $Window.Dispatcher
 
@@ -425,6 +426,28 @@ $Dispatcher.Add_UnhandledException({
         -EA SilentlyContinue
     $e.Handled = $true
 })
+
+# ── Window background ─────────────────────────────────────
+$_winBgPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'assets\window-bg.png' } else { '' }
+if ($_winBgPath -and (Test-Path $_winBgPath)) {
+    try {
+        $bmp   = [System.Windows.Media.Imaging.BitmapImage]::new([System.Uri]::new($_winBgPath))
+        $brush = [System.Windows.Media.ImageBrush]::new($bmp)
+        $brush.Stretch = [System.Windows.Media.Stretch]::UniformToFill
+        $Window.Background = $brush
+    } catch {}
+}
+
+# ── Title bar background ───────────────────────────────────
+$_titleBgPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'assets\title-bar.png' } else { '' }
+if ($_titleBgPath -and (Test-Path $_titleBgPath)) {
+    try {
+        $bmp   = [System.Windows.Media.Imaging.BitmapImage]::new([System.Uri]::new($_titleBgPath))
+        $brush = [System.Windows.Media.ImageBrush]::new($bmp)
+        $brush.Stretch = [System.Windows.Media.Stretch]::Fill
+        $TitleBarCard.Background = $brush
+    } catch {}
+}
 
 # ── Window icon ───────────────────────────────────────────
 $_iconPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'assets\icon.ico' } else { '' }
