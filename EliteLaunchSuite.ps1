@@ -114,10 +114,6 @@ function Load-Settings {
         } else { $null }
         $script:Apps += @{ Name = $E.Name; Process = $E.Process; Path = $P }
     }
-    # Guard against duplicate entries in the settings JSON
-    $_seen = [System.Collections.Generic.HashSet[string]]::new(
-        [System.StringComparer]::OrdinalIgnoreCase)
-    $script:Apps = @($script:Apps | Where-Object { $_seen.Add($_.Name) })
 }
 
 # ── Brush helper ──────────────────────────────────────────
@@ -352,9 +348,7 @@ $SelfVersionScript = {
 
 # ── Load window ───────────────────────────────────────────
 $Window          = [System.Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($Xaml))
-$TitleLabel      = $Window.FindName('TitleLabel')
 $CmdrLabel       = $Window.FindName('CmdrLabel')
-$TerminalLabel   = $Window.FindName('TerminalLabel')
 $VersionLabel    = $Window.FindName('VersionLabel')
 $ReportIssueLink = $Window.FindName('ReportIssueLink')
 $StatusPanel     = $Window.FindName('StatusPanel')
@@ -470,21 +464,16 @@ if ($_b) { $TitleBarCard.Background = $_b }
 $_fontPath = Join-Path $_appDir 'assets\EUROCAPS.TTF'
 if (Test-Path $_fontPath) {
     try {
-        # Fonts.GetFontFamilies(Uri) explicitly scans the folder — more reliable
-        # than the lazy FontFamily(Uri,string) constructor which fails silently.
-        $_fontDirUri = [System.Uri]::new((Join-Path $_appDir 'assets') + '\')
-        $EuroCaps = [System.Windows.Media.Fonts]::GetFontFamilies($_fontDirUri) |
-                        Where-Object { $_.FamilyNames.Values -contains 'Euro Caps' } |
-                        Select-Object -First 1
-        if ($EuroCaps) {
-            $TitleLabel.FontFamily    = $EuroCaps
-            $CmdrLabel.FontFamily     = $EuroCaps
-            $TerminalLabel.FontFamily = $EuroCaps
-            $ShutdownBtn.FontFamily   = $EuroCaps
-            $AutoStartBtn.FontFamily  = $EuroCaps
-            $SettingsBtn.FontFamily   = $EuroCaps
-            $LaunchBtn.FontFamily     = $EuroCaps
-        }
+        $EuroCaps = [System.Windows.Media.FontFamily]::new(
+            [System.Uri]::new("file:///" + (Join-Path $_appDir 'assets').Replace('\', '/') + "/"),
+            "#Euro Caps")
+        $TitleLabel.FontFamily    = $EuroCaps
+        $CmdrLabel.FontFamily     = $EuroCaps
+        $TerminalLabel.FontFamily = $EuroCaps
+        $ShutdownBtn.FontFamily   = $EuroCaps
+        $AutoStartBtn.FontFamily  = $EuroCaps
+        $SettingsBtn.FontFamily   = $EuroCaps
+        $LaunchBtn.FontFamily     = $EuroCaps
     } catch {
         Add-Content -Path $script:LogFile -Value "[assets] Euro Caps font load failed: $_" -EA SilentlyContinue
     }
