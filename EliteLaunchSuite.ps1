@@ -465,7 +465,7 @@ $_fontPath = Join-Path $_appDir 'assets\EUROCAPS.TTF'
 if (Test-Path $_fontPath) {
     try {
         $EuroCaps = [System.Windows.Media.FontFamily]::new(
-            [System.Uri]::new("file:///" + (Join-Path $_appDir 'assets\').Replace('\', '/')),
+            [System.Uri]::new("file:///" + (Join-Path $_appDir 'assets').Replace('\', '/') + "/"),
             "#Euro Caps")
         $TitleLabel.FontFamily    = $EuroCaps
         $CmdrLabel.FontFamily     = $EuroCaps
