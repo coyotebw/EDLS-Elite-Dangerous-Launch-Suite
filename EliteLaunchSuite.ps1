@@ -243,16 +243,22 @@ $SelfVersionScript = {
 
     <!-- Header card -->
     <Border Grid.Row="0" Name="TitleBarCard" Background="Transparent" BorderBrush="#1C1C22" BorderThickness="1"
-            Margin="0,0,0,3" Padding="24,20">
-      <StackPanel>
-        <TextBlock Name="TitleLabel"
+            Margin="0,0,0,3" Padding="24,12">
+      <Grid VerticalAlignment="Center">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Image Grid.Column="0" Name="OutpostImage" Height="64" Margin="0,0,16,0" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Name="TitleLabel"
                    Text="◆ ELITE: DANGEROUS · LAUNCH SUITE ◆"
-                   Foreground="#FFB700" FontSize="23"
-                   TextAlignment="Center" FontWeight="Bold"/>
-        <TextBlock Name="CmdrLabel"
+                   Foreground="#FFB700" FontSize="38"
+                   VerticalAlignment="Center" TextAlignment="Center" FontWeight="Bold"/>
+        <TextBlock Grid.Column="1" Name="CmdrLabel"
                    Foreground="#C8860A" FontSize="19"
-                   TextAlignment="Center" Margin="0,8,0,0"/>
-      </StackPanel>
+                   TextAlignment="Center" Margin="0,8,0,0"
+                   Visibility="Collapsed"/>
+      </Grid>
     </Border>
 
     <!-- Status card -->
@@ -456,6 +462,14 @@ if ($_b) { $Window.Background = $_b }
 $_b = Load-ImageBrush 'assets\title-bar.png' 'Fill'
 if ($_b) { $TitleBarCard.Background = $_b }
 
+# ── Outpost icon in title bar ──────────────────────────────
+$OutpostImage    = $Window.FindName('OutpostImage')
+$_outpostPath = Join-Path $_appDir 'assets\outpost.png'
+if (Test-Path $_outpostPath) {
+    $OutpostImage.Source = [System.Windows.Media.Imaging.BitmapImage]::new(
+        [System.Uri]::new($_outpostPath, [System.UriKind]::Absolute)
+    )
+}
 
 # ── Window icon ───────────────────────────────────────────
 $_iconFull = Join-Path $_appDir 'assets\icon.ico'
