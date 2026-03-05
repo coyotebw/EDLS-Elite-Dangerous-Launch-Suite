@@ -1,9 +1,9 @@
 # ==========================================================
-# Elite Dangerous Launch Suite  — WPF GUI edition ||||||||||
-# by CMDR Coyote Bongwater (and Claude)     ||||||||||||||||
+# |||||||| Elite: Dangerous Launch Suite          ||||||||||
+# |||||||| by CMDR Coyote Bongwater (and Claude)  ||||||||||
 # ==========================================================
 
-$script:AppVersion = '0.7.0'
+$script:AppVersion = '0.8.0'
 
 # ── 64-bit bootstrap ──────────────────────────────────────
 if (-not [Environment]::Is64BitProcess) {
@@ -136,8 +136,8 @@ function Save-AutoStart { param([bool]$Value)
 # ── CMDR label formatter ──────────────────────────────────
 function Format-CmdrLine { param([string]$Name)
     $Spaced = ($Name.ToUpper() -split '\s+' |
-        ForEach-Object { $_.ToCharArray() -join ' ' }) -join '  '
-    "C M D R  ·  $Spaced"
+        ForEach-Object { $_.ToCharArray() -join '' }) -join ' '
+    "[CMDR] $Spaced"
 }
 
 
@@ -250,7 +250,7 @@ $SelfVersionScript = {
             Margin="0,0,0,3" Padding="24,20">
       <StackPanel>
         <TextBlock Name="TitleLabel"
-                   Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
+                   Text="◆ ELITE: DANGEROUS · LAUNCH SUITE ◆"
                    Foreground="#FFB700" FontSize="23"
                    TextAlignment="Center" FontWeight="Bold"/>
         <TextBlock Name="CmdrLabel"
@@ -304,7 +304,7 @@ $SelfVersionScript = {
         <!-- Left: author credit + version + issue link -->
         <StackPanel Grid.Column="0" VerticalAlignment="Center">
           <TextBlock Foreground="#484850" FontSize="11" FontStyle="Italic"
-                     Text="CMDR Coyote Bongwater (and Claude)"/>
+                     Text="by CMDR Coyote Bongwater and (mostly) Claude"/>
           <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
             <TextBlock Name="VersionLabel" Foreground="#3A3A45" FontSize="12"/>
             <TextBlock Foreground="#3A3A45" FontSize="12" Margin="10,0,0,0">
@@ -427,7 +427,7 @@ $Dispatcher.Add_UnhandledException({
 })
 
 # ── Window icon ───────────────────────────────────────────
-$_iconPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'icon.ico' } else { '' }
+$_iconPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'assets\icon.ico' } else { '' }
 if ($_iconPath -and (Test-Path $_iconPath)) {
     try {
         $Window.Icon = [System.Windows.Media.Imaging.BitmapImage]::new(

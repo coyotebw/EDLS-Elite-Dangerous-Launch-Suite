@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot  = $PSScriptRoot
 $SourcePs1 = Join-Path $RepoRoot 'EliteLaunchSuite.ps1'
 $OutputExe = Join-Path $RepoRoot 'EliteLaunchSuite.exe'
-$IconFile  = Join-Path $RepoRoot 'icon.ico'
+$IconFile  = Join-Path $RepoRoot 'assets\icon.ico'
 
 # ── Extract version from the script header comment ────────────────────────────
 # Expects a line like:  # v1.0 by CMDR ...
