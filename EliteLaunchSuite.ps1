@@ -302,7 +302,7 @@ $SelfVersionScript = {
           <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         <!-- Left: author credit + version + issue link -->
-        <StackPanel Grid.Column="0" VerticalAlignment="Center" FontFamily="Consolas">
+        <StackPanel Grid.Column="0" VerticalAlignment="Center" TextElement.FontFamily="Consolas">
           <TextBlock Foreground="#484850" FontSize="11" FontStyle="Italic"
                      Text="by CMDR Coyote Bongwater and (mostly) Claude"/>
           <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
