@@ -261,18 +261,18 @@ $SelfVersionScript = {
     <!-- Header card -->
     <Border Grid.Row="0" Name="TitleBarCard" Background="Transparent" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3" Padding="24,12">
-      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-          <Image Name="OutpostImage" Width="88" Height="88" Margin="0,0,16,0" VerticalAlignment="Center"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Image Name="OutpostImage" Width="88" Height="88" Margin="0,0,16,0" VerticalAlignment="Center"/>
+        <StackPanel VerticalAlignment="Center">
           <TextBlock Name="TitleLabel"
                      Text=" ELITE: DANGEROUS · LAUNCH SUITE "
                      Foreground="#FFB700" FontSize="38"
                      VerticalAlignment="Center" FontWeight="Bold"/>
+          <TextBlock Name="CmdrLabel"
+                     Foreground="#C8860A" FontSize="15"
+                     HorizontalAlignment="Center"
+                     Margin="0,1,0,0"/>
         </StackPanel>
-        <TextBlock Name="CmdrLabel"
-                   Foreground="#C8860A" FontSize="15"
-                   HorizontalAlignment="Center"
-                   Margin="0,4,0,0"/>
       </StackPanel>
     </Border>
 
@@ -542,7 +542,7 @@ function New-StatusRow { param([string]$Key, [string]$Label)
 
     # Outer card — double-wide for Elite so the timer + PID have room on the right
     $Card = [System.Windows.Controls.Border]::new()
-    $Card.Width           = if ($isElite) { 536 } else { 264 }
+    $Card.Width           = if ($isElite) { 532 } else { 264 }
     $Card.Height          = 88
     $Card.Background      = Brush '#CC111114'
     $Card.BorderBrush     = Brush '#1C1C22'
