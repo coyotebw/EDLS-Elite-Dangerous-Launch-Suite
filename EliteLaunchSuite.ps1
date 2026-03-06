@@ -104,7 +104,7 @@ function Load-Settings {
     $script:AllApps = @()
     foreach ($E in $J.Apps) {
         if (-not $E.Name -or -not $E.Process) { continue }
-        $script:AllApps += @{ Name = $E.Name; Process = $E.Process }
+        $script:AllApps += @{ Name = $E.Name; Process = $E.Process; Enabled = [bool]$E.Enabled }
     }
 
     # Apps: enabled-only subset used for launching
@@ -537,7 +537,7 @@ $ShutdownBtn.Add_MouseLeave({
 # ── Status row management ─────────────────────────────────
 $script:StatusRows = @{}
 
-function New-StatusRow { param([string]$Key, [string]$Label)
+function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive = $false)
     $isElite = ($Key -eq 'Elite')
 
     # Outer card — double-wide for Elite so the timer + PID have room on the right
@@ -591,6 +591,20 @@ function New-StatusRow { param([string]$Key, [string]$Label)
 
     $InnerGrid.Children.Add($LabelRow) | Out-Null
 
+    # Row 0 right side: INACTIVE badge for disabled apps
+    if ($IsInactive) {
+        $InactiveTB = [System.Windows.Controls.TextBlock]::new()
+        $InactiveTB.Text              = 'INACTIVE'
+        $InactiveTB.FontSize          = 8
+        $InactiveTB.Foreground        = Brush '#484850'
+        $InactiveTB.VerticalAlignment = 'Center'
+        $InactiveTB.HorizontalAlignment = 'Right'
+        [System.Windows.Controls.Grid]::SetRow($InactiveTB, 0)
+        # Elite has Col 1; non-Elite single-column cell is full-width so right-align works
+        if ($isElite) { [System.Windows.Controls.Grid]::SetColumn($InactiveTB, 1) }
+        $InnerGrid.Children.Add($InactiveTB) | Out-Null
+    }
+
     # Row 1, Col 0: main status text
     $StateTB = [System.Windows.Controls.TextBlock]::new()
     $StateTB.Text       = '—'
@@ -632,10 +646,10 @@ function New-StatusRow { param([string]$Key, [string]$Label)
         [System.Windows.Controls.Grid]::SetColumn($PidTB, 1)
         $InnerGrid.Children.Add($PidTB) | Out-Null
     } else {
-        # PID: Row 2 — bottom-right of standard card
+        # PID: Row 1 — bottom-aligned with status text, right side
         $PidTB.HorizontalAlignment = 'Right'
-        $PidTB.VerticalAlignment   = 'Top'
-        [System.Windows.Controls.Grid]::SetRow($PidTB, 2)
+        $PidTB.VerticalAlignment   = 'Bottom'
+        [System.Windows.Controls.Grid]::SetRow($PidTB, 1)
         $InnerGrid.Children.Add($PidTB) | Out-Null
         # TimerTB kept in row map for UiStatus ClearTimer compat but not shown
     }
@@ -650,9 +664,10 @@ function Rebuild-StatusRows {
     $script:StatusRows.Clear()
     New-StatusRow -Key 'Steam' -Label 'Steam'
     New-StatusRow -Key 'Elite' -Label 'Elite: Dangerous'
-    $AppsToShow = if ($script:ShowInactiveCards) { $script:AllApps } else { $script:Apps }
+    $EnabledNames = @($script:Apps | ForEach-Object { $_.Name })
+    $AppsToShow   = if ($script:ShowInactiveCards) { $script:AllApps } else { $script:Apps }
     foreach ($App in $AppsToShow) {
-        New-StatusRow -Key $App.Name -Label $App.Name
+        New-StatusRow -Key $App.Name -Label $App.Name -IsInactive ($App.Name -notin $EnabledNames)
     }
 }
 
