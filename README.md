@@ -1,7 +1,8 @@
 # EDLS - Elite: Dangerous Launch Suite
 
 A launcher utility for **Elite: Dangerous** (Steam/Windows only for now). Starts the game and all your companion tools in one click and automatically shuts them down when you're done.
-<img width="1276" height="1063" alt="image" src="https://github.com/user-attachments/assets/2b150467-3d75-4fea-b940-39668cbb244e" />
+
+<img width="959" height="799" alt="edls090" src="https://github.com/user-attachments/assets/2bf751f2-5f21-4a66-9d8c-071751328487" />
 
 ---
 
@@ -17,7 +18,7 @@ A launcher utility for **Elite: Dangerous** (Steam/Windows only for now). Starts
 
 ---
 
-<img width="1277" height="1060" alt="image" src="https://github.com/user-attachments/assets/d6de0e16-ae4e-412c-87cc-a7585089a255" />
+<img width="961" height="798" alt="edls0902" src="https://github.com/user-attachments/assets/62c61648-9933-4a9a-a593-bad697ad84eb" />
 
 
 ## Requirements
@@ -56,7 +57,7 @@ _**NOTE** that this does indeed work for Steam. You'll need to make an epic game
 legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLauncher.exe /autorun /autoquit
 
 
-**INSERT CORRECT INSTRUCTIONS HERE**
+**WIP**
 
 
 99) Test that we've done it all correctly by opening the game thru your Steam library. If it boots straight to the main menu and doesn't give you a blurb about logging in to update the game, you're all set!
@@ -69,7 +70,7 @@ legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLaunch
 
 ### Download (recommended)
 
-Download the latest `EliteLaunchSuite.exe` from the [Releases page](https://github.com/coyotebw/EDLaunchSuite/releases). No installation needed — just run the `.exe` and a default `settings.json` is created automatically on first launch. Open **[ SETTINGS ]** to adjust companion app paths if any are installed in non-standard locations.
+Download and run the latest `EDLS-setup.exe` from the [Releases page](https://github.com/coyotebw/EDLaunchSuite/releases). 
 
 ### Building from source (manual compilation)
 
@@ -180,4 +181,4 @@ If an app is installed elsewhere, update its path in the **[ SETTINGS ]** dialog
 ## Notes
 
 - If a companion app is installed in a non-standard location, update its path in **[ SETTINGS ]**. A missing path will be logged and skipped — it will not cause a crash.
-- The launcher is compiled to an `.exe` via **ps2exe** (see `Build.ps1`). No external GUI tool is required.
+- install wizard by [Inno Setup](https://jrsoftware.org/isinfo.php) and assets from [EDassets](https://edassets.org/#/) & Claude
