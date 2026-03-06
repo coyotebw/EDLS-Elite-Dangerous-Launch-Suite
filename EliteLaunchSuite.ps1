@@ -192,7 +192,7 @@ $SelfVersionScript = {
 <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Elite: Dangerous | Launch Suite"
+    Title="EDLS | Elite: Dangerous Launch Suite"
     Background="#080808"
     FontFamily="Agency FB"
     Width="1295" Height="1070" MinWidth="648" MinHeight="535"
@@ -247,7 +247,7 @@ $SelfVersionScript = {
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
         <Image Name="OutpostImage" Height="64" Margin="0,0,16,0" VerticalAlignment="Center"/>
         <TextBlock Name="TitleLabel"
-                   Text="◆ ELITE: DANGEROUS · LAUNCH SUITE ◆"
+                   Text=" ELITE: DANGEROUS · LAUNCH SUITE "
                    Foreground="#FFB700" FontSize="38"
                    VerticalAlignment="Center" FontWeight="Bold"/>
         <TextBlock Name="CmdrLabel"
@@ -258,11 +258,12 @@ $SelfVersionScript = {
     </Border>
 
     <!-- Status card -->
-    <Border Grid.Row="1" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="1"
+    <Border Grid.Row="1" Background="Transparent" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3" Padding="14,12">
       <StackPanel>
-        <TextBlock Text="S T A T U S" Foreground="#8888A0" FontSize="11"
-                   Margin="2,0,0,10"/>
+        <Border Grid.Row="0" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
+          <TextBlock Name="StatusLabel" Text="S T A T U S" Foreground="#8888A0" FontSize="11"/>
+        </Border>
         <WrapPanel Name="StatusPanel" Orientation="Horizontal"/>
       </StackPanel>
     </Border>
