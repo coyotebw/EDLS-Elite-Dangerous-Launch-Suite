@@ -86,6 +86,14 @@ try {
             Write-Host ""
             Write-Host "BUILD SUCCEEDED  ->  $OutputExe  ($SizeKB KB)" -ForegroundColor Green
             Write-Host ""
+
+            # Clear app data so the fresh build starts with clean defaults
+            $AppDataDir = Join-Path $env:LOCALAPPDATA 'EDLaunchSuite'
+            if (Test-Path $AppDataDir) {
+                Remove-Item (Join-Path $AppDataDir 'settings.json') -Force -EA SilentlyContinue
+                Remove-Item (Join-Path $AppDataDir 'launcher.log')  -Force -EA SilentlyContinue
+                Write-Host "App data cleared: $AppDataDir" -ForegroundColor Yellow
+            }
         } else {
             throw "Output file was not created."
         }
@@ -100,7 +108,10 @@ try {
     Write-Host "Full log written to: $BuildLog"
     Stop-Transcript
     # Keep terminal open when run interactively so the output can be read
-    if ($Host.Name -eq 'ConsoleHost') { Read-Host "`nPress Enter to close" }
+    if ($Host.Name -eq 'ConsoleHost') {
+        Write-Host "`nPress any key to close..."
+        $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+    }
 }
 
 exit $exitCode
