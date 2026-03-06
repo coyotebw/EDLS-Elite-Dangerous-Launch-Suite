@@ -55,15 +55,11 @@ _**NOTE** that this does indeed work for Steam. You'll need to make an epic game
 
 4. Download the zip from the [latest release of Min-Ed-Launcher](https://github.com/rfvgyhn/min-ed-launcher/releases). Open your Elite: Dangerous install directory (from Steam library, right click the game > properties > local files > browse local files). From the zip, place MinEdLauncher.exe in your Elite Dangerous install location so that it's in the same folder as EDLaunch.exe. (MinEdLauncher.Bootstrap is for Epic only and may be ignored.)
 
-5) Now we'll change our launch options through Steam. In your library, right click the game, then click properties. In the *launch options* text box, enter cmd /c "MinEdLauncher.exe %command% /autorun /autoquit" and then close the window.
+5. Now we'll change our launch options through Steam. In your library, right click the game, then click properties. In the *launch options* text box, enter cmd /c "MinEdLauncher.exe %command% /autorun /autoquit" and then close the window.
 
-legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLauncher.exe /autorun /autoquit
+6. See [this very helpful and illustrated section of the min-ed-launcher wiki to configure legendary](https://github.com/rfvgyhn/min-ed-launcher/wiki/Using-Legendary-on-Windows)
 
-
-**WIP**
-
-
-99) Test that we've done it all correctly by opening the game thru your Steam library. If it boots straight to the main menu and doesn't give you a blurb about logging in to update the game, you're all set!
+7. Test that we've done it all correctly by opening the game thru your Steam library. If it boots straight to the main menu and doesn't give you a blurb about logging in to update the game, you're all set!
 
 
 
