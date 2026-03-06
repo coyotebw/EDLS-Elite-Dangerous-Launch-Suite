@@ -1,6 +1,6 @@
 # EDLS - Elite: Dangerous Launch Suite
 
-A launcher utility for **Elite: Dangerous** (Steam/Windows only for now). Starts the game and all your companion tools in one click and automatically shuts them down when you're done.
+A launcher utility for **Elite: Dangerous** (Steam/Windows only for now). Starts the game and all your companion tools in one click and automatically shuts them down when you're done. Originally just a 20-line powershell script until I decided it was an excuse to try out claude code. Claude did a pretty solid job, and only broke it several times (meaning his track record is better than mine)
 
 <img width="959" height="799" alt="edls090" src="https://github.com/user-attachments/assets/2bf751f2-5f21-4a66-9d8c-071751328487" />
 
