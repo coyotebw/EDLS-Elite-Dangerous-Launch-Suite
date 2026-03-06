@@ -182,7 +182,7 @@ $SelfVersionScript = {
     try {
         $H = @{ 'User-Agent' = "EDLaunchSuite/$AppVersion" }
         $Release = Invoke-RestMethod `
-            -Uri 'https://api.github.com/repos/coyotebw/EDLaunchSuite/releases/latest' `
+            -Uri 'https://api.github.com/repos/coyotebw/EDLS-Elite-Dangerous-Launch-Suite/releases/latest' `
             -Headers $H -EA Stop
         $LatestTag = $Release.tag_name -replace '^[vV]', ''
         $Current   = [Version]$AppVersion
@@ -193,7 +193,14 @@ $SelfVersionScript = {
             UiLog "EDLaunchSuite v$AppVersion — up to date." -Lvl Dim
         }
     } catch {
-        # Network unavailable or repo not found — silently skip.
+        $ErrMsg = $_.ToString()
+        if ($ErrMsg -match '404|Not Found') {
+            UiLog 'Version check: no releases published yet.' -Lvl Dim
+        } elseif ($_ -is [System.Net.WebException] -or $ErrMsg -match 'connect|network|timeout|resolve|unable to') {
+            UiLog 'Version check skipped (network unavailable).' -Lvl Dim
+        } else {
+            UiLog "Version check failed: $ErrMsg" -Lvl Dim
+        }
     }
 }
 
@@ -256,7 +263,7 @@ $SelfVersionScript = {
             Margin="0,0,0,3" Padding="24,12">
       <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-          <Image Name="OutpostImage" Height="64" Margin="0,0,16,0" VerticalAlignment="Center"/>
+          <Image Name="OutpostImage" Width="88" Height="88" Margin="0,0,16,0" VerticalAlignment="Center"/>
           <TextBlock Name="TitleLabel"
                      Text=" ELITE: DANGEROUS · LAUNCH SUITE "
                      Foreground="#FFB700" FontSize="38"
@@ -625,8 +632,9 @@ function New-StatusRow { param([string]$Key, [string]$Label)
         [System.Windows.Controls.Grid]::SetColumn($PidTB, 1)
         $InnerGrid.Children.Add($PidTB) | Out-Null
     } else {
-        # PID: Row 2 — bottom of standard card
-        $PidTB.VerticalAlignment = 'Top'
+        # PID: Row 2 — bottom-right of standard card
+        $PidTB.HorizontalAlignment = 'Right'
+        $PidTB.VerticalAlignment   = 'Top'
         [System.Windows.Controls.Grid]::SetRow($PidTB, 2)
         $InnerGrid.Children.Add($PidTB) | Out-Null
         # TimerTB kept in row map for UiStatus ClearTimer compat but not shown
@@ -1209,6 +1217,17 @@ $SettingsBtn.Add_Click({
         }
     })
     $CancelBtn.Add_Click({ $Dlg.Close() })
+
+    # Highlight the Settings button while the dialog is open
+    $SettingsBtn.Foreground  = Brush '#FFB700'
+    $SettingsBtn.Background  = Brush '#CC140F00'
+    $SettingsBtn.BorderBrush = Brush '#C8860A'
+    $Dlg.Add_Closed({
+        $SettingsBtn.Foreground  = Brush '#666670'
+        $SettingsBtn.Background  = Brush '#CC111114'
+        $SettingsBtn.BorderBrush = Brush '#2A2A35'
+    })
+
     $Dlg.ShowDialog() | Out-Null
 })
 
