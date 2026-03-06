@@ -743,9 +743,9 @@ $LaunchScript = {
         })
     }
 
-    function UiPid { param([string]$Key, [int]$Pid)
+    function UiPid { param([string]$Key, [int]$ProcId)
         $row = $StatusRows[$Key]; if (-not $row -or -not $row.PidTB) { return }
-        $p = $Pid
+        $p = $ProcId
         $Dispatcher.Invoke([Action]{ $row.PidTB.Text = "PID $p" })
     }
 
