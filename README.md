@@ -46,7 +46,10 @@ _**NOTE** that this does indeed work for Steam. You'll need to make an epic game
 	1. In the window that pops up, click "environment variables" on the bottom right.
 	2. Under 'System Variables' find the variable called 'Path' and click edit.
 	3. Click 'New' at the top right. In the text box that comes up, paste the path to the directory where you saved legendary.exe - so in my case it would be `C:\legendary`
-	4. Click 'ok' on all the dialogs to dismiss. Check to see that we did it right by opening command prompt and typing in `legendary`. It should look like **IMAGE GOES HERE!!!**
+	4. Click 'ok' on all the dialogs to dismiss. Check to see that we did it right by opening command prompt and typing in `legendary`. It should look like the image below:
+
+<img width="671" height="579" alt="cmd" src="https://github.com/user-attachments/assets/2803533c-0776-4be4-a783-febe21d962ab" />
+
 
 3. Next we'll authenticate through legendary. Open a command prompt anywhere and enter `legendary auth`. You'll be prompted to log in through Epic. If you haven't already, first go to [the Epic Games website](https://www.epicgames.com/id/register/guided) and make an account, then connect your steam to it. Once that's done you can log into Epic. We're now done with legendary.
 
