@@ -39,6 +39,7 @@ The purpose of EDLaunchSuite is, by default, foiled by the Frontier launcher, wh
 Elite: Dangerous directly, bypassing the Frontier launcher. Min-ed-launcher in turn requires another program called [legendary](https://github.com/derrod/legendary). Don't be daunted by the instructions! I've written a detailed guide below, and anyway if you don't set this part up it does rather undermine the point of the program. But hey, knock yourself out.
 
 _**NOTE** that this does indeed work for Steam. You'll need to make an epic games account and link your steam to it, but that's all. No installing the epic launcher or anything else._
+_Also this guide is a work in progress..._
 
 1. First we will need to install legendary. Download the .exe from [latest release of legendary](https://github.com/derrod/legendary/releases) and put it somewhere that it won't be moved or deleted (i.e. not in downloads). I went with `C:\legendary\legendary.exe`
 
@@ -51,7 +52,7 @@ _**NOTE** that this does indeed work for Steam. You'll need to make an epic game
 <img width="671" height="579" alt="cmd" src="https://github.com/user-attachments/assets/2803533c-0776-4be4-a783-febe21d962ab" />
 
 
-3. Next we'll authenticate through legendary. Open a command prompt anywhere and enter `legendary auth`. You'll be prompted to log in through Epic. If you haven't already, first go to [the Epic Games website](https://www.epicgames.com/id/register/guided) and make an account, then connect your steam to it. Once that's done you can log into Epic. We're now done with legendary.
+3. Next we'll authenticate through legendary. Open a command prompt anywhere and enter `legendary auth`. You'll be prompted to log in through Epic. If you haven't already, first go to [the Epic Games website](https://www.epicgames.com/id/register/guided) and make an account, then connect your steam to it. Once that's done you can log into Epic. We're now done with legendary for the moment.
 
 4. Download the zip from the [latest release of Min-Ed-Launcher](https://github.com/rfvgyhn/min-ed-launcher/releases). Open your Elite: Dangerous install directory (from Steam library, right click the game > properties > local files > browse local files). From the zip, place MinEdLauncher.exe in your Elite Dangerous install location so that it's in the same folder as EDLaunch.exe. (MinEdLauncher.Bootstrap is for Epic only and may be ignored.)
 
