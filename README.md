@@ -1,23 +1,24 @@
 # EDLS - Elite: Dangerous Launch Suite
 
-A Windows-based launcher utility for **Elite: Dangerous** that starts the game and all your companion tools in one click — and automatically shuts them down when you're done.
+A launcher utility for **Elite: Dangerous** (Steam/Windows only for now). Starts the game and all your companion tools in one click and automatically shuts them down when you're done.
+<img width="1276" height="1063" alt="image" src="https://github.com/user-attachments/assets/2b150467-3d75-4fea-b940-39668cbb244e" />
 
 ---
 
 ## Features
 
-- One-click launch of Elite: Dangerous via Steam plus up to N companion apps
-- Configurable delay between each app launch
+- One-click launch of Elite: Dangerous via Steam plus up to N companion apps; bypassing Frontier launcher with [Min-Ed-Launcher](https://github.com/rfvgyhn/min-ed-launcher) (see below)
 - Real-time status indicators showing which apps are running
-- Timestamped activity log (UI + file)
 - Automatically closes companion apps when Elite: Dangerous exits
-- Manual **[ SHUTDOWN ]** button to kill companion apps at any time
-- Elapsed session timer
-- Auto-start mode — launches everything when EDLaunchSuite itself opens
-- Settings dialog to add, remove, enable/disable apps and adjust options
+- Manual shutdown button to kill companion apps at any time
+- Auto-start mode — launches everything when EDLaunchSuite itself opens (off by default)
+- Configurable- can add, remove, enable/disable apps and adjust options
 - Settings and logs persist in `%LOCALAPPDATA%\EDLaunchSuite\`
 
 ---
+
+<img width="1277" height="1060" alt="image" src="https://github.com/user-attachments/assets/d6de0e16-ae4e-412c-87cc-a7585089a255" />
+
 
 ## Requirements
 
@@ -27,7 +28,40 @@ A Windows-based launcher utility for **Elite: Dangerous** that starts the game a
 | PowerShell | 5.1 or later |
 | .NET Framework | 3.0+ (WPF) |
 | Steam | Must be installed; Elite: Dangerous owned and installed |
-| Elite: Dangerous Steam App ID | 359320 (default) |
+| [Min-Ed-Launcher](https://github.com/rfvgyhn/min-ed-launcher) | Required to bypass the Frontier launcher (see below) |
+
+---
+
+## Min-Ed-Launcher Setup (Highly recommended)
+
+The purpose of EDLaunchSuite is, by default, foiled by the Frontier launcher, which forces you to wait for their laggy unoptimized launcher and then click a few extra times so you have to see the store. We can circumvent this with [min-ed-launcher](https://github.com/rfvgyhn/min-ed-launcher) to launch
+Elite: Dangerous directly, bypassing the Frontier launcher. Min-ed-launcher in turn requires another program called [legendary](https://github.com/derrod/legendary). Don't be daunted by the instructions! I've written a detailed guide below, and anyway if you don't set this part up it does rather undermine the point of the program. But hey, knock yourself out.
+
+_**NOTE** that this does indeed work for Steam. You'll need to make an epic games account and link your steam to it, but that's all. No installing the epic launcher or anything else._
+
+1. First we will need to install legendary. Download the .exe from [latest release of legendary](https://github.com/derrod/legendary/releases) and put it somewhere that it won't be moved or deleted (i.e. not in downloads). I went with `C:\legendary\legendary.exe`
+
+2. Now we will add legendary to our `%PATH%` Open the start menu and type `env`, then click on "Edit the system environment variables".
+	1. In the window that pops up, click "environment variables" on the bottom right.
+	2. Under 'System Variables' find the variable called 'Path' and click edit.
+	3. Click 'New' at the top right. In the text box that comes up, paste the path to the directory where you saved legendary.exe - so in my case it would be `C:\legendary`
+	4. Click 'ok' on all the dialogs to dismiss. Check to see that we did it right by opening command prompt and typing in `legendary`. It should look like **IMAGE GOES HERE!!!**
+
+3. Next we'll authenticate through legendary. Open a command prompt anywhere and enter `legendary auth`. You'll be prompted to log in through Epic. If you haven't already, first go to [the Epic Games website](https://www.epicgames.com/id/register/guided) and make an account, then connect your steam to it. Once that's done you can log into Epic. We're now done with legendary.
+
+4. Download the zip from the [latest release of Min-Ed-Launcher](https://github.com/rfvgyhn/min-ed-launcher/releases). Open your Elite: Dangerous install directory (from Steam library, right click the game > properties > local files > browse local files). From the zip, place MinEdLauncher.exe in your Elite Dangerous install location so that it's in the same folder as EDLaunch.exe. (MinEdLauncher.Bootstrap is for Epic only and may be ignored.)
+
+5) Now we'll change our launch options through Steam. In your library, right click the game, then click properties. In the *launch options* text box, enter cmd /c "MinEdLauncher.exe %command% /autorun /autoquit" and then close the window.
+
+legendary.exe launch 9c203b6ed35846e8a4a9ff1e314f6593 --override-exe MinEdLauncher.exe /autorun /autoquit
+
+
+**INSERT CORRECT INSTRUCTIONS HERE**
+
+
+99) Test that we've done it all correctly by opening the game thru your Steam library. If it boots straight to the main menu and doesn't give you a blurb about logging in to update the game, you're all set!
+
+
 
 ---
 
@@ -86,7 +120,6 @@ Settings are stored at:
 | Field | Type | Description |
 |---|---|---|
 | `CmdrName` | string | Your commander name, shown in the title bar |
-| `LaunchDelaySeconds` | integer | Seconds to wait between launching each companion app |
 | `EliteAppId` | integer | Steam App ID for Elite: Dangerous (default: `359320`) |
 | `AutoStart` | boolean | Automatically trigger the launch sequence on startup |
 | `Apps` | array | List of companion app entries (see below) |

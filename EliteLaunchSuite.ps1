@@ -1,9 +1,9 @@
 # ==========================================================
-# Elite Dangerous Launch Suite  — WPF GUI edition ||||||||||
-# by CMDR Coyote Bongwater (and Claude)     ||||||||||||||||
+# |||||||| Elite: Dangerous Launch Suite          ||||||||||
+# |||||||| by CMDR Coyote Bongwater (and Claude)  ||||||||||
 # ==========================================================
 
-$script:AppVersion = '0.7.0'
+$script:AppVersion = '0.9.0'
 
 # ── 64-bit bootstrap ──────────────────────────────────────
 if (-not [Environment]::Is64BitProcess) {
@@ -32,11 +32,6 @@ Add-Content -Path $script:LogFile `
     -EA SilentlyContinue
 
 # ── Settings functions ─────────────────────────────────────
-function Test-SteamAvailable {
-    try { $null = Get-Item 'HKCU:\Software\Valve\Steam' -EA Stop; $true }
-    catch { $false }
-}
-
 function Load-Settings {
     $DefaultApps = @(
         [ordered]@{
@@ -48,7 +43,7 @@ function Load-Settings {
         [ordered]@{
             Name    = 'SrvSurvey'
             Process = 'SrvSurvey'
-            Path    = 'C:\Users\Andrew\AppData\Local\Apps\2.0\HY5GKY7N.214\DPC60QJN.OC9\srvs..tion_0000000000000000_0002.0000_6851f976136fff83\SrvSurvey.exe'
+            Path    = ''
             Enabled = $true
         },
         [ordered]@{
@@ -78,7 +73,6 @@ function Load-Settings {
     )
     $Defaults = [ordered]@{
         CmdrName           = "Epstein Didn't Kill Himself"
-        LaunchDelaySeconds = 3
         EliteAppId         = 359320
         Apps               = $DefaultApps
     }
@@ -100,27 +94,20 @@ function Load-Settings {
         try { $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {}
     }
 
-    # Migrate outdated default values forward so existing settings.json files
-    # stay current without requiring a manual reset.
-    $dirty = $false
-    foreach ($App in $J.Apps) {
-        if ($App.Name -eq 'EDHM_UI') {
-            if ($App.Process -eq 'EDHM_UI') { $App.Process = 'EDHM-UI-V3'; $dirty = $true }
-            if ($App.Path -eq '%ProgramFiles%\EDHM_UI\EDHM_UI.exe') {
-                $App.Path = '%LOCALAPPDATA%\EDHM-UI-V3\EDHM-UI-V3.exe'; $dirty = $true
-            }
-        }
-        if ($App.Name -eq 'opentrack' -and $App.Path -eq '%ProgramFiles%\opentrack\opentrack.exe') {
-            $App.Path = '%ProgramFiles(x86)%\opentrack\opentrack.exe'; $dirty = $true
-        }
+    $script:CmdrName          = if ($J.CmdrName)                    { $J.CmdrName }               else { $Defaults.CmdrName }
+    $script:EliteAppId        = if ($null -ne $J.EliteAppId)        { [int]$J.EliteAppId }        else { $Defaults.EliteAppId }
+    $script:AutoStart         = if ($null -ne $J.AutoStart)         { [bool]$J.AutoStart }        else { $false }
+    $script:ShowInactiveCards = if ($null -ne $J.ShowInactiveCards) { [bool]$J.ShowInactiveCards } else { $true }
+    $script:AutoClose         = if ($null -ne $J.AutoClose)         { [bool]$J.AutoClose }        else { $false }
+
+    # AllApps: every entry with a Name + Process (used for status card display regardless of Enabled)
+    $script:AllApps = @()
+    foreach ($E in $J.Apps) {
+        if (-not $E.Name -or -not $E.Process) { continue }
+        $script:AllApps += @{ Name = $E.Name; Process = $E.Process; Enabled = [bool]$E.Enabled }
     }
-    if ($dirty) { try { $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {} }
 
-    $script:CmdrName           = if ($J.CmdrName)                     { $J.CmdrName }                else { $Defaults.CmdrName }
-    $script:EliteAppId         = if ($null -ne $J.EliteAppId)         { [int]$J.EliteAppId }         else { $Defaults.EliteAppId }
-    $script:LaunchDelaySeconds = if ($null -ne $J.LaunchDelaySeconds) { [int]$J.LaunchDelaySeconds } else { $Defaults.LaunchDelaySeconds }
-    $script:AutoStart          = if ($null -ne $J.AutoStart)          { [bool]$J.AutoStart }          else { $false }
-
+    # Apps: enabled-only subset used for launching
     $script:Apps = @()
     foreach ($E in $J.Apps) {
         if (-not $E.Enabled -or -not $E.Name -or -not $E.Process) { continue }
@@ -155,8 +142,8 @@ function Save-AutoStart { param([bool]$Value)
 # ── CMDR label formatter ──────────────────────────────────
 function Format-CmdrLine { param([string]$Name)
     $Spaced = ($Name.ToUpper() -split '\s+' |
-        ForEach-Object { $_.ToCharArray() -join ' ' }) -join '  '
-    "C M D R  ·  $Spaced"
+        ForEach-Object { $_.ToCharArray() -join '' }) -join ' '
+    "[CMDR] $Spaced"
 }
 
 
@@ -195,7 +182,7 @@ $SelfVersionScript = {
     try {
         $H = @{ 'User-Agent' = "EDLaunchSuite/$AppVersion" }
         $Release = Invoke-RestMethod `
-            -Uri 'https://api.github.com/repos/coyotebw/EDLaunchSuite/releases/latest' `
+            -Uri 'https://api.github.com/repos/coyotebw/EDLS-Elite-Dangerous-Launch-Suite/releases/latest' `
             -Headers $H -EA Stop
         $LatestTag = $Release.tag_name -replace '^[vV]', ''
         $Current   = [Version]$AppVersion
@@ -206,7 +193,14 @@ $SelfVersionScript = {
             UiLog "EDLaunchSuite v$AppVersion — up to date." -Lvl Dim
         }
     } catch {
-        # Network unavailable or repo not found — silently skip.
+        $ErrMsg = $_.ToString()
+        if ($ErrMsg -match '404|Not Found') {
+            UiLog 'Version check: no releases published yet.' -Lvl Dim
+        } elseif ($_ -is [System.Net.WebException] -or $ErrMsg -match 'connect|network|timeout|resolve|unable to') {
+            UiLog 'Version check skipped (network unavailable).' -Lvl Dim
+        } else {
+            UiLog "Version check failed: $ErrMsg" -Lvl Dim
+        }
     }
 }
 
@@ -215,9 +209,9 @@ $SelfVersionScript = {
 <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Elite: Dangerous | Launch Suite"
+    Title="EDLS | Elite: Dangerous Launch Suite"
     Background="#080808"
-    FontFamily="Consolas"
+    FontFamily="Agency FB"
     Width="1295" Height="1070" MinWidth="648" MinHeight="535"
     ResizeMode="CanResizeWithGrip"
     WindowStartupLocation="CenterScreen">
@@ -265,43 +259,54 @@ $SelfVersionScript = {
     </Grid.RowDefinitions>
 
     <!-- Header card -->
-    <Border Grid.Row="0" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
-            Margin="0,0,0,3" Padding="24,20">
-      <StackPanel>
-        <TextBlock Name="TitleLabel"
-                   Text="◆  E L I T E  :  D A N G E R O U S  ·  L A U N C H  S U I T E  ◆"
-                   Foreground="#FFB700" FontSize="23"
-                   TextAlignment="Center" FontWeight="Bold"/>
-        <TextBlock Name="CmdrLabel"
-                   Foreground="#C8860A" FontSize="19"
-                   TextAlignment="Center" Margin="0,8,0,0"/>
+    <Border Grid.Row="0" Name="TitleBarCard" Background="Transparent" BorderBrush="#1C1C22" BorderThickness="1"
+            Margin="0,0,0,3" Padding="24,12">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Image Name="OutpostImage" Width="88" Height="88" Margin="0,0,16,0" VerticalAlignment="Center"/>
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Name="TitleLabel"
+                     Text=" ELITE: DANGEROUS · LAUNCH SUITE "
+                     Foreground="#FFB700" FontSize="38"
+                     VerticalAlignment="Center" FontWeight="Bold"/>
+          <TextBlock Name="CmdrLabel"
+                     Foreground="#C8860A" FontSize="15"
+                     HorizontalAlignment="Center"
+                     Margin="0,1,0,0"/>
+        </StackPanel>
       </StackPanel>
     </Border>
 
     <!-- Status card -->
-    <Border Grid.Row="1" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
-            Margin="0,0,0,3" Padding="14,12">
-      <StackPanel>
-        <TextBlock Text="S T A T U S" Foreground="#484850" FontSize="11"
-                   Margin="2,0,0,10"/>
-        <WrapPanel Name="StatusPanel" Orientation="Horizontal"/>
-      </StackPanel>
+    <Border Grid.Row="1" Background="Transparent" BorderBrush="#1C1C22" BorderThickness="1"
+            Margin="0,0,0,3">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
+          <TextBlock Name="StatusLabel" Text="S T A T U S" Foreground="#8888A0" FontSize="11"/>
+        </Border>
+        <Border Grid.Row="1" Padding="14,8">
+          <WrapPanel Name="StatusPanel" Orientation="Horizontal"/>
+        </Border>
+      </Grid>
     </Border>
 
     <!-- Log card -->
-    <Border Grid.Row="2" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+    <Border Grid.Row="2" Background="Transparent" BorderBrush="#1C1C22" BorderThickness="1"
             Margin="0,0,0,3">
       <Grid>
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <Border Grid.Row="0" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
-          <TextBlock Text="A C T I V I T Y  L O G" Foreground="#484850" FontSize="11"/>
+        <Border Grid.Row="0" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="0,0,0,1" Padding="18,9">
+          <TextBlock Name="TerminalLabel" Text="T E R M I N A L" Foreground="#8888A0" FontSize="11"/>
         </Border>
         <RichTextBox Name="LogBox" Grid.Row="1"
                      IsReadOnly="True"
-                     Background="#080808"
+                     Background="Transparent"
                      BorderThickness="0"
                      Padding="18,10"
                      FontSize="16"
@@ -313,7 +318,7 @@ $SelfVersionScript = {
     </Border>
 
     <!-- Button bar card -->
-    <Border Grid.Row="3" Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+    <Border Grid.Row="3" Background="#CC111114" BorderBrush="#1C1C22" BorderThickness="1"
             Padding="18,14">
       <Grid>
         <Grid.ColumnDefinitions>
@@ -321,9 +326,9 @@ $SelfVersionScript = {
           <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         <!-- Left: author credit + version + issue link -->
-        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+        <StackPanel Grid.Column="0" VerticalAlignment="Center" TextElement.FontFamily="Consolas">
           <TextBlock Foreground="#484850" FontSize="11" FontStyle="Italic"
-                     Text="CMDR Coyote Bongwater (and Claude)"/>
+                     Text="by CMDR Coyote Bongwater and (mostly) Claude"/>
           <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
             <TextBlock Name="VersionLabel" Foreground="#3A3A45" FontSize="12"/>
             <TextBlock Foreground="#3A3A45" FontSize="12" Margin="10,0,0,0">
@@ -336,27 +341,27 @@ $SelfVersionScript = {
           <Button Name="ShutdownBtn"
                   Content="SHUTDOWN" Style="{StaticResource DiagBtn}"
                   Width="190" Height="52" Margin="0,0,-11,0"
-                  Background="#111114" Foreground="#666670"
+                  Background="#CC111114" Foreground="#666670"
                   BorderBrush="#2A2A35" BorderThickness="1"
-                  FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+                  FontSize="17" Cursor="Hand"/>
           <Button Name="AutoStartBtn"
                   Content="AUTO START" Style="{StaticResource DiagBtn}"
                   Width="190" Height="52" Margin="0,0,-11,0"
-                  Background="#111114" Foreground="#666670"
+                  Background="#CC111114" Foreground="#666670"
                   BorderBrush="#2A2A35" BorderThickness="1"
-                  FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+                  FontSize="17" Cursor="Hand"/>
           <Button Name="SettingsBtn"
                   Content="SETTINGS" Style="{StaticResource DiagBtn}"
                   Width="180" Height="52" Margin="0,0,-11,0"
-                  Background="#111114" Foreground="#666670"
+                  Background="#CC111114" Foreground="#666670"
                   BorderBrush="#2A2A35" BorderThickness="1"
-                  FontFamily="Consolas" FontSize="17" Cursor="Hand"/>
+                  FontSize="17" Cursor="Hand"/>
           <Button Name="LaunchBtn"
                   Content="LAUNCH" Style="{StaticResource DiagBtn}"
                   Width="220" Height="52"
-                  Background="#140F00" Foreground="#FFB700"
+                  Background="#CC140F00" Foreground="#FFB700"
                   BorderBrush="#C8860A" BorderThickness="2"
-                  FontFamily="Consolas" FontSize="24" FontWeight="Bold" Cursor="Hand"/>
+                  FontSize="24" FontWeight="Bold" Cursor="Hand"/>
         </StackPanel>
       </Grid>
     </Border>
@@ -366,9 +371,7 @@ $SelfVersionScript = {
 '@
 
 # ── Load window ───────────────────────────────────────────
-$Reader          = [System.Xml.XmlNodeReader]::new($Xaml)
-$Window          = [System.Windows.Markup.XamlReader]::Load($Reader)
-$TitleLabel      = $Window.FindName('TitleLabel')
+$Window          = [System.Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($Xaml))
 $CmdrLabel       = $Window.FindName('CmdrLabel')
 $VersionLabel    = $Window.FindName('VersionLabel')
 $ReportIssueLink = $Window.FindName('ReportIssueLink')
@@ -378,6 +381,7 @@ $LaunchBtn       = $Window.FindName('LaunchBtn')
 $SettingsBtn     = $Window.FindName('SettingsBtn')
 $AutoStartBtn    = $Window.FindName('AutoStartBtn')
 $ShutdownBtn     = $Window.FindName('ShutdownBtn')
+$TitleBarCard    = $Window.FindName('TitleBarCard')
 $LogDocument     = $LogBox.Document
 $Dispatcher      = $Window.Dispatcher
 
@@ -447,20 +451,64 @@ $Dispatcher.Add_UnhandledException({
     $e.Handled = $true
 })
 
+# ── Resolve app directory (reliable in both .ps1 and ps2exe .exe) ────────────
+$_appDir = if ($PSScriptRoot) { $PSScriptRoot } else {
+    [System.IO.Path]::GetDirectoryName(
+        [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName)
+}
+
+# ── Asset loader helper ───────────────────────────────────
+function Load-ImageBrush([string]$RelPath, [string]$Stretch) {
+    $full = Join-Path $_appDir $RelPath
+    if (-not (Test-Path $full)) {
+        Add-Content -Path $script:LogFile -Value "[assets] not found: $full" -EA SilentlyContinue
+        return $null
+    }
+    try {
+        $uri   = [System.Uri]::new($full, [System.UriKind]::Absolute)
+        $bmp   = [System.Windows.Media.Imaging.BitmapImage]::new($uri)
+        $brush = [System.Windows.Media.ImageBrush]::new($bmp)
+        $brush.Stretch = [System.Windows.Media.Stretch]$Stretch
+        return $brush
+    } catch {
+        Add-Content -Path $script:LogFile -Value "[assets] failed to load ${RelPath}: $_" -EA SilentlyContinue
+        return $null
+    }
+}
+
+# ── Window background ─────────────────────────────────────
+$_b = Load-ImageBrush 'assets\window-bg.png' 'UniformToFill'
+if ($_b) { $Window.Background = $_b }
+
+# ── Title bar background ───────────────────────────────────
+$_b = Load-ImageBrush 'assets\title-bar.png' 'Fill'
+if ($_b) { $TitleBarCard.Background = $_b }
+
+# ── Outpost icon in title bar ──────────────────────────────
+$OutpostImage    = $Window.FindName('OutpostImage')
+$_outpostPath = Join-Path $_appDir 'assets\outpost.png'
+if (Test-Path $_outpostPath) {
+    $OutpostImage.Source = [System.Windows.Media.Imaging.BitmapImage]::new(
+        [System.Uri]::new($_outpostPath, [System.UriKind]::Absolute)
+    )
+}
+
 # ── Window icon ───────────────────────────────────────────
-$_iconPath = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'icon.ico' } else { '' }
-if ($_iconPath -and (Test-Path $_iconPath)) {
+$_iconFull = Join-Path $_appDir 'assets\icon.ico'
+if (Test-Path $_iconFull) {
     try {
         $Window.Icon = [System.Windows.Media.Imaging.BitmapImage]::new(
-            [System.Uri]::new($_iconPath))
-    } catch {}
+            [System.Uri]::new($_iconFull, [System.UriKind]::Absolute))
+    } catch {
+        Add-Content -Path $script:LogFile -Value "[assets] failed to load icon: $_" -EA SilentlyContinue
+    }
 }
 
 # ── Button hover effects ──────────────────────────────────
 $LaunchBtn.Add_MouseEnter({
     try {
         if ($LaunchBtn.IsEnabled) {
-            $LaunchBtn.Background  = Brush '#221A00'
+            $LaunchBtn.Background  = Brush '#CC221A00'
             $LaunchBtn.BorderBrush = Brush '#FFB700'
         }
     } catch {}
@@ -468,7 +516,7 @@ $LaunchBtn.Add_MouseEnter({
 $LaunchBtn.Add_MouseLeave({
     try {
         if ($LaunchBtn.IsEnabled) {
-            $LaunchBtn.Background  = Brush '#140F00'
+            $LaunchBtn.Background  = Brush '#CC140F00'
             $LaunchBtn.BorderBrush = Brush '#C8860A'
         }
     } catch {}
@@ -489,20 +537,20 @@ $ShutdownBtn.Add_MouseLeave({
 # ── Status row management ─────────────────────────────────
 $script:StatusRows = @{}
 
-function New-StatusRow { param([string]$Key, [string]$Label)
+function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive = $false)
     $isElite = ($Key -eq 'Elite')
 
-    # Outer card — double-wide for Elite so the timer has room
+    # Outer card — double-wide for Elite so the timer + PID have room on the right
     $Card = [System.Windows.Controls.Border]::new()
-    $Card.Width           = if ($isElite) { 536 } else { 264 }
+    $Card.Width           = if ($isElite) { 532 } else { 264 }
     $Card.Height          = 88
-    $Card.Background      = Brush '#111114'
+    $Card.Background      = Brush '#CC111114'
     $Card.BorderBrush     = Brush '#1C1C22'
     $Card.BorderThickness = [System.Windows.Thickness]::new(1)
     $Card.Margin          = [System.Windows.Thickness]::new(0,0,4,4)
     $Card.Padding         = [System.Windows.Thickness]::new(14,10,14,10)
 
-    # Inner 3-row grid: label row / status text / secondary text
+    # Inner grid — 3 rows for all cards; Elite adds a right column for timer+PID
     $InnerGrid = [System.Windows.Controls.Grid]::new()
     foreach ($h in @('Auto', 'Star', 'Auto')) {
         $rd = [System.Windows.Controls.RowDefinition]::new()
@@ -511,11 +559,21 @@ function New-StatusRow { param([string]$Key, [string]$Label)
         } else { [System.Windows.GridLength]::Auto }
         $InnerGrid.RowDefinitions.Add($rd)
     }
+    if ($isElite) {
+        # Col 0 (*): label + status text  |  Col 1 (Auto): timer (top) + PID (bottom)
+        $cd0 = [System.Windows.Controls.ColumnDefinition]::new()
+        $cd0.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+        $cd1 = [System.Windows.Controls.ColumnDefinition]::new()
+        $cd1.Width = [System.Windows.GridLength]::Auto
+        $InnerGrid.ColumnDefinitions.Add($cd0)
+        $InnerGrid.ColumnDefinitions.Add($cd1)
+    }
 
-    # Row 0: small dot indicator + app name label
+    # Row 0, Col 0: small dot indicator + app name label
     $LabelRow = [System.Windows.Controls.StackPanel]::new()
     $LabelRow.Orientation = 'Horizontal'
     [System.Windows.Controls.Grid]::SetRow($LabelRow, 0)
+    [System.Windows.Controls.Grid]::SetColumn($LabelRow, 0)
 
     $Dot = [System.Windows.Shapes.Rectangle]::new()
     $Dot.Width = 8; $Dot.Height = 8
@@ -527,13 +585,27 @@ function New-StatusRow { param([string]$Key, [string]$Label)
     $LabelTB = [System.Windows.Controls.TextBlock]::new()
     $LabelTB.Text       = $Label.ToUpper()
     $LabelTB.FontSize   = 10
-    $LabelTB.Foreground = Brush '#484850'
+    $LabelTB.Foreground = Brush '#8888A0'
     $LabelTB.VerticalAlignment = 'Center'
     $LabelRow.Children.Add($LabelTB) | Out-Null
 
     $InnerGrid.Children.Add($LabelRow) | Out-Null
 
-    # Row 1: main status text (large; bigger + bold for Elite to show the timer prominently)
+    # Row 0 right side: INACTIVE badge for disabled apps
+    if ($IsInactive) {
+        $InactiveTB = [System.Windows.Controls.TextBlock]::new()
+        $InactiveTB.Text              = 'INACTIVE'
+        $InactiveTB.FontSize          = 8
+        $InactiveTB.Foreground        = Brush '#484850'
+        $InactiveTB.VerticalAlignment = 'Center'
+        $InactiveTB.HorizontalAlignment = 'Right'
+        [System.Windows.Controls.Grid]::SetRow($InactiveTB, 0)
+        # Elite has Col 1; non-Elite single-column cell is full-width so right-align works
+        if ($isElite) { [System.Windows.Controls.Grid]::SetColumn($InactiveTB, 1) }
+        $InnerGrid.Children.Add($InactiveTB) | Out-Null
+    }
+
+    # Row 1, Col 0: main status text
     $StateTB = [System.Windows.Controls.TextBlock]::new()
     $StateTB.Text       = '—'
     $StateTB.FontSize   = if ($isElite) { 28 } else { 20 }
@@ -543,19 +615,48 @@ function New-StatusRow { param([string]$Key, [string]$Label)
     $StateTB.VerticalAlignment = 'Bottom'
     $StateTB.Margin            = [System.Windows.Thickness]::new(0,4,0,2)
     [System.Windows.Controls.Grid]::SetRow($StateTB, 1)
+    [System.Windows.Controls.Grid]::SetColumn($StateTB, 0)
+    if ($isElite) { [System.Windows.Controls.Grid]::SetRowSpan($StateTB, 2) }
     $InnerGrid.Children.Add($StateTB) | Out-Null
 
-    # Row 2: secondary text (elapsed timer for Elite; blank for others by default)
+    # Timer TextBlock (Elite: Col 1 Row 1 top-right; non-Elite: not added to grid)
     $TimerTB = [System.Windows.Controls.TextBlock]::new()
     $TimerTB.Text       = ''
     $TimerTB.FontSize   = 11
     $TimerTB.Foreground = Brush '#484850'
-    [System.Windows.Controls.Grid]::SetRow($TimerTB, 2)
-    $InnerGrid.Children.Add($TimerTB) | Out-Null
+
+    # PID TextBlock
+    $PidTB = [System.Windows.Controls.TextBlock]::new()
+    $PidTB.Text       = ''
+    $PidTB.FontSize   = 10
+    $PidTB.Foreground = Brush '#484850'
+
+    if ($isElite) {
+        # Timer: Col 1, Row 1 — sits atop the PID on the right side of the Elite card
+        $TimerTB.HorizontalAlignment = 'Right'
+        $TimerTB.VerticalAlignment   = 'Bottom'
+        [System.Windows.Controls.Grid]::SetRow($TimerTB, 1)
+        [System.Windows.Controls.Grid]::SetColumn($TimerTB, 1)
+        $InnerGrid.Children.Add($TimerTB) | Out-Null
+
+        # PID: Col 1, Row 2 — below timer
+        $PidTB.HorizontalAlignment = 'Right'
+        $PidTB.VerticalAlignment   = 'Top'
+        [System.Windows.Controls.Grid]::SetRow($PidTB, 2)
+        [System.Windows.Controls.Grid]::SetColumn($PidTB, 1)
+        $InnerGrid.Children.Add($PidTB) | Out-Null
+    } else {
+        # PID: Row 1 — bottom-aligned with status text, right side
+        $PidTB.HorizontalAlignment = 'Right'
+        $PidTB.VerticalAlignment   = 'Bottom'
+        [System.Windows.Controls.Grid]::SetRow($PidTB, 1)
+        $InnerGrid.Children.Add($PidTB) | Out-Null
+        # TimerTB kept in row map for UiStatus ClearTimer compat but not shown
+    }
 
     $Card.Child = $InnerGrid
     $StatusPanel.Children.Add($Card) | Out-Null
-    $script:StatusRows[$Key] = @{ Dot = $Dot; StateTB = $StateTB; TimerTB = $TimerTB }
+    $script:StatusRows[$Key] = @{ Dot = $Dot; StateTB = $StateTB; TimerTB = $TimerTB; PidTB = $PidTB }
 }
 
 function Rebuild-StatusRows {
@@ -563,8 +664,10 @@ function Rebuild-StatusRows {
     $script:StatusRows.Clear()
     New-StatusRow -Key 'Steam' -Label 'Steam'
     New-StatusRow -Key 'Elite' -Label 'Elite: Dangerous'
-    foreach ($App in $script:Apps) {
-        New-StatusRow -Key $App.Name -Label $App.Name
+    $EnabledNames = @($script:Apps | ForEach-Object { $_.Name })
+    $AppsToShow   = if ($script:ShowInactiveCards) { $script:AllApps } else { $script:Apps }
+    foreach ($App in $AppsToShow) {
+        New-StatusRow -Key $App.Name -Label $App.Name -IsInactive ($App.Name -notin $EnabledNames)
     }
 }
 
@@ -617,7 +720,7 @@ $ElapsedTimer.Add_Tick({
 
 # ── Background launch scriptblock ─────────────────────────
 # Variables injected via InitialSessionState:
-#   $Dispatcher, $LogFile, $EliteAppId, $LaunchDelaySeconds,
+#   $Dispatcher, $LogFile, $EliteAppId,
 #   $Apps, $StatusRows, $LogDocument, $LogBox,
 #   $LaunchBtn, $ElapsedTimer, $SharedState
 $LaunchScript = {
@@ -650,15 +753,23 @@ $LaunchScript = {
     }
 
     function UiStatus { param([string]$Key, [string]$State,
-                              [string]$Color = '#C8860A', [bool]$ClearTimer = $false)
+                              [string]$Color = '#C8860A', [bool]$ClearTimer = $false,
+                              [bool]$ClearPid = $false)
         $row = $StatusRows[$Key]; if (-not $row) { return }
-        $c = $Color; $s = $State; $ct = $ClearTimer
+        $c = $Color; $s = $State; $ct = $ClearTimer; $cp = $ClearPid
         $Dispatcher.Invoke([Action]{
-            $row.Dot.Fill         = RsBrush $c
-            $row.StateTB.Text     = $s
+            $row.Dot.Fill           = RsBrush $c
+            $row.StateTB.Text       = $s
             $row.StateTB.Foreground = RsBrush $c
             if ($ct) { $row.TimerTB.Text = '' }
+            if ($cp -and $row.PidTB) { $row.PidTB.Text = '' }
         })
+    }
+
+    function UiPid { param([string]$Key, [int]$ProcId)
+        $row = $StatusRows[$Key]; if (-not $row -or -not $row.PidTB) { return }
+        $p = $ProcId
+        $Dispatcher.Invoke([Action]{ $row.PidTB.Text = "PID $p" })
     }
 
     function Fail { param($M)
@@ -702,11 +813,13 @@ $LaunchScript = {
     }
     UiStatus 'Steam' 'Online' '#44CC44'
     UiLog 'Steam online.' -Lvl Success
+    $SteamProc = Get-Process -Name steam -EA SilentlyContinue | Select-Object -First 1
+    if ($SteamProc) { UiPid 'Steam' $SteamProc.Id }
 
     # ── Launch Elite ───────────────────────────────────────
     UiStatus 'Elite' 'Waiting…' '#C8860A'
     UiLog 'Opening Elite: Dangerous via Steam...'
-    Start-Process "steam://run/$EliteAppId//-skipFrontierLauncher/"
+    Start-Process "steam://run/$EliteAppId"
     UiLog 'Waiting for EliteDangerous64.exe...'
 
     $EP = $null
@@ -718,6 +831,7 @@ $LaunchScript = {
 
     UiStatus 'Elite' 'Running' '#FFB700'
     UiLog "Elite: Dangerous online. (PID: $($EP.Id))" -Lvl Success
+    UiPid 'Elite' $EP.Id
 
     $SharedState['EliteStartTime'] = [DateTime]::Now
     $Dispatcher.Invoke([Action]{ $ElapsedTimer.Start() })
@@ -733,6 +847,7 @@ $LaunchScript = {
                 UiLog "$($App.Name) already running — skipping." -Lvl Dim
                 $Launched += @{ Name = $App.Name; Process = $App.Process; PID = $ExistingProc.Id }
                 UiStatus $App.Name 'Online' '#44CC44'
+                UiPid $App.Name $ExistingProc.Id
                 continue
             }
             try {
@@ -741,12 +856,12 @@ $LaunchScript = {
                 $P = Start-Process $App.Path -PassThru -EA Stop
                 $Launched += @{ Name = $App.Name; Process = $App.Process; PID = $P.Id }
                 UiStatus $App.Name 'Online' '#44CC44'
+                UiPid $App.Name $P.Id
                 UiLog "$($App.Name) online. (PID: $($P.Id))" -Lvl Success
             } catch {
                 UiLog "Failed to launch $($App.Name): $_" -Lvl Warning
                 UiStatus $App.Name 'Failed' '#CC4444'
             }
-            Start-Sleep -Seconds $LaunchDelaySeconds
         }
         UiLog 'All systems nominal.' -Lvl Success
 
@@ -761,14 +876,14 @@ $LaunchScript = {
                 if ($LA.PID) { $Still = Get-Process -Id $LA.PID -EA SilentlyContinue }
                 if (-not $Still) { $Still = Get-Process -Name $LA.Process -EA SilentlyContinue }
                 if (-not $Still) {
-                    UiStatus $LA.Name 'Offline' '#484850'
+                    UiStatus $LA.Name 'Offline' '#484850' -ClearPid $true
                     $NotedOffline[$LA.Name] = $true
                 }
             }
         }
 
         # ── Shutdown ───────────────────────────────────────────
-        UiStatus 'Elite' 'Offline' '#484850' -ClearTimer $true
+        UiStatus 'Elite' 'Offline' '#484850' -ClearTimer $true -ClearPid $true
         UiLog 'Elite: Dangerous offline.'
         UiLog 'Closing third-party tools...'
 
@@ -779,7 +894,7 @@ $LaunchScript = {
             if ($Running) {
                 UiLog "Stopping $($LA.Name)..."
                 $Running | Stop-Process -Force -EA SilentlyContinue
-                UiStatus $LA.Name 'Closed' '#484850'
+                UiStatus $LA.Name 'Closed' '#484850' -ClearPid $true
             }
         }
 
@@ -787,6 +902,12 @@ $LaunchScript = {
         Add-Content -Path $LogFile `
             -Value "=== Session ended $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" `
             -EA SilentlyContinue
+
+        if ($AutoClose) {
+            UiLog 'Closing launcher in 5 seconds...' -Lvl Dim
+            Start-Sleep -Seconds 5
+            $Dispatcher.Invoke([Action]{ $Window.Close() })
+        }
 
     } catch {
         $ErrMsg = $_.ToString()
@@ -823,14 +944,15 @@ $LaunchBtn.Add_Click({
         @('Dispatcher',         $Dispatcher),
         @('LogFile',            $script:LogFile),
         @('EliteAppId',         $script:EliteAppId),
-        @('LaunchDelaySeconds', $script:LaunchDelaySeconds),
         @('Apps',               $script:Apps),
         @('StatusRows',         $script:StatusRows),
         @('LogDocument',        $LogDocument),
         @('LogBox',             $LogBox),
         @('LaunchBtn',          $LaunchBtn),
         @('ElapsedTimer',       $ElapsedTimer),
-        @('SharedState',        $SharedState)
+        @('SharedState',        $SharedState),
+        @('AutoClose',          $script:AutoClose),
+        @('Window',             $Window)
     )) {
         $ISS.Variables.Add(
             [System.Management.Automation.Runspaces.SessionStateVariableEntry]::new(
@@ -885,11 +1007,11 @@ $AutoStartBtn.Add_Click({
         $script:AutoStart = -not $script:AutoStart
         if ($script:AutoStart) {
             $AutoStartBtn.Foreground  = Brush '#FFB700'
-            $AutoStartBtn.Background  = Brush '#140F00'
+            $AutoStartBtn.Background  = Brush '#CC140F00'
             $AutoStartBtn.BorderBrush = Brush '#C8860A'
         } else {
             $AutoStartBtn.Foreground  = Brush '#666670'
-            $AutoStartBtn.Background  = Brush '#111114'
+            $AutoStartBtn.Background  = Brush '#CC111114'
             $AutoStartBtn.BorderBrush = Brush '#2A2A35'
         }
         Save-AutoStart $script:AutoStart
@@ -912,6 +1034,7 @@ $ShutdownBtn.Add_Click({
                     $row.Dot.Fill           = Brush '#484850'
                     $row.StateTB.Text       = 'Closed'
                     $row.StateTB.Foreground = Brush '#484850'
+                    if ($row.PidTB) { $row.PidTB.Text = '' }
                 }
             }
         }
@@ -935,7 +1058,7 @@ $SettingsBtn.Add_Click({
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Launch Suite — Settings"
     Background="#080808" FontFamily="Consolas"
-    Width="640" Height="480"
+    Width="640" Height="520"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterOwner">
 
@@ -965,23 +1088,20 @@ $SettingsBtn.Add_Click({
           <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="CMDR Name"
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="CMDR NAME"
                    Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
         <TextBox Grid.Row="0" Grid.Column="1" Name="CmdrBox"
                  FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
                  BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="Steam App ID"
-                   Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
-        <TextBox Grid.Row="1" Grid.Column="1" Name="AppIdBox"
-                 FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
-                 BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
+        <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Name="ChkShowInactive"
+                  Content="Show status cards for inactive programs"
+                  Foreground="#C8860A" FontSize="11" Margin="0,8,0,2"/>
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Launch Delay (s)"
-                   Foreground="#666670" FontSize="11" VerticalAlignment="Center" Margin="0,4"/>
-        <TextBox Grid.Row="2" Grid.Column="1" Name="DelayBox"
-                 FontSize="11" Background="#0C0C0F" Foreground="#FFB700"
-                 BorderBrush="#252530" CaretBrush="#FFB700" Padding="6,4" Margin="0,4"/>
+        <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Name="ChkAutoClose"
+                  Content="Close launcher automatically after shutdown sequence (5s delay)"
+                  Foreground="#C8860A" FontSize="11" Margin="0,2,0,2"/>
+
       </Grid>
 
       <!-- Apps grid -->
@@ -1002,28 +1122,28 @@ $SettingsBtn.Add_Click({
           </Style>
         </DataGrid.ColumnHeaderStyle>
         <DataGrid.Columns>
-          <DataGridCheckBoxColumn Header="On"      Binding="{Binding Enabled}" Width="36"/>
-          <DataGridTextColumn    Header="Name"    Binding="{Binding Name}"    Width="130"/>
-          <DataGridTextColumn    Header="Process" Binding="{Binding Process}" Width="180"/>
-          <DataGridTextColumn    Header="Path"    Binding="{Binding Path}"    Width="*"/>
+          <DataGridCheckBoxColumn Header="ON"      Binding="{Binding Enabled}" Width="36"/>
+          <DataGridTextColumn    Header="NAME"    Binding="{Binding Name}"    Width="130"/>
+          <DataGridTextColumn    Header="PROCESS" Binding="{Binding Process}" Width="180"/>
+          <DataGridTextColumn    Header="PATH"    Binding="{Binding Path}"    Width="*"/>
         </DataGrid.Columns>
       </DataGrid>
 
       <!-- Buttons -->
       <Grid Grid.Row="3" Margin="0,12,0,0">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-          <Button Name="AddAppBtn" Content="+ Add" Width="72" Height="30" Margin="0,0,6,0"
+          <Button Name="AddAppBtn" Content="+ ADD" Width="72" Height="30" Margin="0,0,6,0"
                   Background="#111114" Foreground="#C8860A"
                   BorderBrush="#252530" BorderThickness="1" Cursor="Hand"/>
-          <Button Name="RemoveAppBtn" Content="- Remove" Width="84" Height="30"
+          <Button Name="RemoveAppBtn" Content="- REMOVE" Width="84" Height="30"
                   Background="#111114" Foreground="#666670"
                   BorderBrush="#252530" BorderThickness="1" Cursor="Hand"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-          <Button Name="SaveBtn" Content="Save" Width="80" Height="30" Margin="0,0,8,0"
+          <Button Name="SaveBtn" Content="SAVE" Width="80" Height="30" Margin="0,0,8,0"
                   Background="#140F00" Foreground="#FFB700"
                   BorderBrush="#C8860A" BorderThickness="1" Cursor="Hand"/>
-          <Button Name="CancelBtn" Content="Cancel" Width="80" Height="30"
+          <Button Name="CancelBtn" Content="CANCEL" Width="80" Height="30"
                   Background="#111114" Foreground="#666670"
                   BorderBrush="#252530" BorderThickness="1" Cursor="Hand"/>
         </StackPanel>
@@ -1033,22 +1153,21 @@ $SettingsBtn.Add_Click({
 </Window>
 '@
 
-    $SR       = [System.Xml.XmlNodeReader]::new($SX)
-    $Dlg      = [System.Windows.Markup.XamlReader]::Load($SR)
+    $Dlg      = [System.Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($SX))
     $Dlg.Owner= $Window
 
-    $CmdrBox  = $Dlg.FindName('CmdrBox')
-    $AppIdBox = $Dlg.FindName('AppIdBox')
-    $DelayBox = $Dlg.FindName('DelayBox')
-    $AppsGrid = $Dlg.FindName('AppsGrid')
+    $CmdrBox         = $Dlg.FindName('CmdrBox')
+    $ChkShowInactive = $Dlg.FindName('ChkShowInactive')
+    $ChkAutoClose    = $Dlg.FindName('ChkAutoClose')
+    $AppsGrid        = $Dlg.FindName('AppsGrid')
     $AddAppBtn    = $Dlg.FindName('AddAppBtn')
     $RemoveAppBtn = $Dlg.FindName('RemoveAppBtn')
     $SaveBtn      = $Dlg.FindName('SaveBtn')
     $CancelBtn    = $Dlg.FindName('CancelBtn')
 
-    $CmdrBox.Text  = $script:CmdrName
-    $AppIdBox.Text = "$($script:EliteAppId)"
-    $DelayBox.Text = "$($script:LaunchDelaySeconds)"
+    $CmdrBox.Text                = $script:CmdrName
+    $ChkShowInactive.IsChecked   = $script:ShowInactiveCards
+    $ChkAutoClose.IsChecked      = $script:AutoClose
 
     try {
         $RawJson  = Get-Content $script:SettingsFile -Raw -EA Stop |
@@ -1095,11 +1214,12 @@ $SettingsBtn.Add_Click({
                 }
             })
             [ordered]@{
-                CmdrName           = $CmdrBox.Text
-                LaunchDelaySeconds = [int]$DelayBox.Text
-                EliteAppId         = [int]$AppIdBox.Text
-                AutoStart          = $script:AutoStart
-                Apps               = $NewApps
+                CmdrName          = $CmdrBox.Text
+                EliteAppId        = $script:EliteAppId
+                AutoStart         = $script:AutoStart
+                ShowInactiveCards = [bool]$ChkShowInactive.IsChecked
+                AutoClose         = [bool]$ChkAutoClose.IsChecked
+                Apps              = $NewApps
             } | ConvertTo-Json -Depth 5 |
                 Set-Content $script:SettingsFile -Encoding UTF8
             Load-Settings
@@ -1112,6 +1232,17 @@ $SettingsBtn.Add_Click({
         }
     })
     $CancelBtn.Add_Click({ $Dlg.Close() })
+
+    # Highlight the Settings button while the dialog is open
+    $SettingsBtn.Foreground  = Brush '#FFB700'
+    $SettingsBtn.Background  = Brush '#CC140F00'
+    $SettingsBtn.BorderBrush = Brush '#C8860A'
+    $Dlg.Add_Closed({
+        $SettingsBtn.Foreground  = Brush '#666670'
+        $SettingsBtn.Background  = Brush '#CC111114'
+        $SettingsBtn.BorderBrush = Brush '#2A2A35'
+    })
+
     $Dlg.ShowDialog() | Out-Null
 })
 
@@ -1124,7 +1255,7 @@ Rebuild-StatusRows
 # Restore auto-start button state from settings
 if ($script:AutoStart) {
     $AutoStartBtn.Foreground  = Brush '#FFB700'
-    $AutoStartBtn.Background  = Brush '#140F00'
+    $AutoStartBtn.Background  = Brush '#CC140F00'
     $AutoStartBtn.BorderBrush = Brush '#C8860A'
 }
 

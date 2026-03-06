@@ -1,6 +1,9 @@
 # Compiled output — build locally with Build.ps1
 *.exe
 
+# Build transcript
+build.log
+
 # Windows
 Thumbs.db
 Desktop.ini
