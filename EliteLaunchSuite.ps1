@@ -906,7 +906,7 @@ $LaunchScript = {
         if ($AutoClose) {
             UiLog 'Closing launcher in 5 seconds...' -Lvl Dim
             Start-Sleep -Seconds 5
-            $Dispatcher.Invoke([Action]{ $Window.Close() })
+            $Dispatcher.BeginInvoke([Action]{ $Window.Close() })
         }
 
     } catch {
@@ -920,7 +920,7 @@ $LaunchScript = {
         # Always stop the timer and re-enable the button — idempotent and safe to
         # call twice on the normal path (stopped timer is a no-op in WPF).
         try {
-            $Dispatcher.Invoke([Action]{
+            $Dispatcher.BeginInvoke([Action]{
                 $ElapsedTimer.Stop()
                 $LaunchBtn.IsEnabled = $true
                 $LaunchBtn.Content   = 'LAUNCH'
