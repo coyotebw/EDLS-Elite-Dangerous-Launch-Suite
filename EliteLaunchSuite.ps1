@@ -75,6 +75,9 @@ function Load-Settings {
         CmdrName           = "Epstein Didn't Kill Himself"
         EliteAppId         = 359320
         SetupComplete      = $false
+        AutoStart          = $false
+        ShowInactiveCards  = $true
+        AutoClose          = $false
         Apps               = $DefaultApps
     }
 
@@ -97,10 +100,10 @@ function Load-Settings {
 
     $script:CmdrName          = if ($J.CmdrName)                    { $J.CmdrName }               else { $Defaults.CmdrName }
     $script:EliteAppId        = if ($null -ne $J.EliteAppId)        { [int]$J.EliteAppId }        else { $Defaults.EliteAppId }
-    $script:SetupComplete     = if ($null -ne $J.SetupComplete)     { [bool]$J.SetupComplete }    else { $false }
-    $script:AutoStart         = if ($null -ne $J.AutoStart)         { [bool]$J.AutoStart }        else { $false }
-    $script:ShowInactiveCards = if ($null -ne $J.ShowInactiveCards) { [bool]$J.ShowInactiveCards } else { $true }
-    $script:AutoClose         = if ($null -ne $J.AutoClose)         { [bool]$J.AutoClose }        else { $false }
+    $script:SetupComplete     = if ($null -ne $J.SetupComplete)     { [bool]$J.SetupComplete }    else { $Defaults.SetupComplete }
+    $script:AutoStart         = if ($null -ne $J.AutoStart)         { [bool]$J.AutoStart }        else { $Defaults.AutoStart }
+    $script:ShowInactiveCards = if ($null -ne $J.ShowInactiveCards) { [bool]$J.ShowInactiveCards } else { $Defaults.ShowInactiveCards }
+    $script:AutoClose         = if ($null -ne $J.AutoClose)         { [bool]$J.AutoClose }        else { $Defaults.AutoClose }
 
     # AllApps: every entry with a Name + Process (used for status card display regardless of Enabled)
     $script:AllApps = @()
@@ -1419,6 +1422,7 @@ $SettingsBtn.Add_Click({
             [ordered]@{
                 CmdrName          = $CmdrBox.Text
                 EliteAppId        = $script:EliteAppId
+                SetupComplete     = $script:SetupComplete
                 AutoStart         = $script:AutoStart
                 ShowInactiveCards = [bool]$ChkShowInactive.IsChecked
                 AutoClose         = [bool]$ChkAutoClose.IsChecked
