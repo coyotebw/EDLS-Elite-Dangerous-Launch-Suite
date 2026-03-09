@@ -148,7 +148,7 @@ function Format-CmdrLine { param([string]$Name)
 
 
 # ── Self-version check scriptblock ────────────────────────
-# Injected vars: $Dispatcher, $LogFile, $LogDocument, $LogBox, $AppVersion
+# Injected vars: $Dispatcher, $LogFile, $LogDocument, $LogBox, $AppVersion, $RepoRoot
 $SelfVersionScript = {
     Add-Type -AssemblyName PresentationFramework, PresentationCore
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -188,7 +188,55 @@ $SelfVersionScript = {
         $Current   = [Version]$AppVersion
         $Latest    = try { [Version]$LatestTag } catch { $null }
         if ($Latest -and $Latest -gt $Current) {
-            UiLog "Update available: EDLaunchSuite v$LatestTag  (running v$AppVersion)" -Lvl Warning
+            UiLog "Update available: EDLaunchSuite v$LatestTag  (running v$AppVersion) — updating..." -Lvl Warning
+
+            $TempDir = Join-Path $env:TEMP "EDLS-update-$(Get-Date -Format 'yyyyMMddHHmmss')"
+            $ZipPath = Join-Path $TempDir 'repo.zip'
+            New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
+            try {
+                # Download the repo source from the main branch
+                UiLog 'Downloading update from repository...' -Lvl Dim
+                $ZipUrl = 'https://github.com/coyotebw/EDLS-Elite-Dangerous-Launch-Suite/archive/refs/heads/main.zip'
+                Invoke-WebRequest -Uri $ZipUrl -OutFile $ZipPath -Headers $H -UseBasicParsing -EA Stop
+
+                UiLog 'Extracting...' -Lvl Dim
+                Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
+                $ExtractedDir = Get-ChildItem $TempDir -Directory | Select-Object -First 1
+                if (-not $ExtractedDir) { throw 'Could not find extracted repo directory.' }
+
+                # Relative paths present in the new version
+                $NewRel = Get-ChildItem $ExtractedDir.FullName -Recurse -File |
+                    ForEach-Object { $_.FullName.Substring($ExtractedDir.FullName.Length + 1) }
+
+                # Relative paths currently on disk (exclude .git, *.exe, build.log)
+                $OldRel = Get-ChildItem $RepoRoot -Recurse -File |
+                    Where-Object {
+                        $_.FullName -notmatch '[\\/]\.git[\\/]' -and
+                        $_.Extension -ne '.exe' -and
+                        $_.Name -ne 'build.log'
+                    } |
+                    ForEach-Object { $_.FullName.Substring($RepoRoot.Length + 1) }
+
+                # Remove files that no longer exist upstream
+                foreach ($Rel in $OldRel) {
+                    if ($NewRel -notcontains $Rel) {
+                        Remove-Item (Join-Path $RepoRoot $Rel) -Force -EA SilentlyContinue
+                        UiLog "Removed: $Rel" -Lvl Dim
+                    }
+                }
+
+                # Copy all new/updated files (adds new, overwrites changed)
+                Copy-Item "$($ExtractedDir.FullName)\*" -Destination $RepoRoot -Recurse -Force
+
+                UiLog 'Files updated — rebuilding...' -Lvl Dim
+                $BuildScript = Join-Path $RepoRoot 'Build.ps1'
+                & powershell.exe -ExecutionPolicy Bypass -NonInteractive -NoProfile -File $BuildScript 2>&1 |
+                    ForEach-Object { UiLog "$_" -Lvl Dim }
+
+                UiLog "Updated to v$LatestTag — please restart EDLS." -Lvl Success
+            } finally {
+                Remove-Item $TempDir -Recurse -Force -EA SilentlyContinue
+            }
         } else {
             UiLog "EDLaunchSuite v$AppVersion — up to date." -Lvl Dim
         }
@@ -1282,7 +1330,8 @@ $Window.Add_Loaded({
         @('LogFile',     $script:LogFile),
         @('LogDocument', $LogDocument),
         @('LogBox',      $LogBox),
-        @('AppVersion',  $script:AppVersion)
+        @('AppVersion',  $script:AppVersion),
+        @('RepoRoot',    $_appDir)
     )) {
         $ISS_ver.Variables.Add(
             [System.Management.Automation.Runspaces.SessionStateVariableEntry]::new(
