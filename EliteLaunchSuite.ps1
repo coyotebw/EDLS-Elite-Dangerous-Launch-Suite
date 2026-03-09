@@ -228,12 +228,25 @@ $SelfVersionScript = {
                 # Copy all new/updated files (adds new, overwrites changed)
                 Copy-Item "$($ExtractedDir.FullName)\*" -Destination $RepoRoot -Recurse -Force
 
-                UiLog 'Files updated — rebuilding...' -Lvl Dim
-                $BuildScript = Join-Path $RepoRoot 'Build.ps1'
-                & powershell.exe -ExecutionPolicy Bypass -NonInteractive -NoProfile -File $BuildScript 2>&1 |
-                    ForEach-Object { UiLog "$_" -Lvl Dim }
+                # Write a helper batch that rebuilds and relaunches once the user closes EDLS.
+                # We cannot rebuild while the exe is running — Windows locks it.
+                $BatchPath = Join-Path $RepoRoot '_edls_update.bat'
+                $ExePath   = Join-Path $RepoRoot 'EliteLaunchSuite.exe'
+                $BuildPs1  = Join-Path $RepoRoot 'Build.ps1'
+                @"
+@echo off
+echo Waiting for EDLS to close...
+:wait
+tasklist /fi "imagename eq EliteLaunchSuite.exe" 2>nul | find /i "EliteLaunchSuite.exe" >nul
+if not errorlevel 1 ( timeout /t 2 /nobreak >nul & goto wait )
+echo Rebuilding...
+powershell.exe -ExecutionPolicy Bypass -NonInteractive -NoProfile -File "$BuildPs1"
+echo Launching...
+start "" "$ExePath"
+del "%~f0"
+"@ | Set-Content -Path $BatchPath -Encoding ASCII
 
-                UiLog "Updated to v$LatestTag — please restart EDLS." -Lvl Success
+                UiLog "Source updated to v$LatestTag — close EDLS and run _edls_update.bat to rebuild and relaunch." -Lvl Success
             } finally {
                 Remove-Item $TempDir -Recurse -Force -EA SilentlyContinue
             }
