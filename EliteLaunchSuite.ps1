@@ -1113,13 +1113,22 @@ function Show-FirstTimeSetup {
         </StackPanel>
       </Border>
 
-      <!-- Complete button -->
-      <Button Grid.Row="3" Name="CompleteBtn" Content="COMPLETE SETUP"
-              Height="34" Margin="0,16,0,0"
-              Background="#140F00" Foreground="#FFB700"
-              BorderBrush="#C8860A" BorderThickness="1"
-              FontFamily="Consolas" FontSize="12"
-              Cursor="Hand"/>
+      <!-- Button bar -->
+      <StackPanel Grid.Row="3" Orientation="Horizontal"
+                  HorizontalAlignment="Right" Margin="0,16,0,0">
+        <Button Name="SkipBtn" Content="SKIP"
+                Height="34" Width="90" Margin="0,0,8,0"
+                Background="#111114" Foreground="#666670"
+                BorderBrush="#2A2A35" BorderThickness="1"
+                FontFamily="Consolas" FontSize="12"
+                Cursor="Hand"/>
+        <Button Name="CompleteBtn" Content="COMPLETE SETUP"
+                Height="34"
+                Background="#140F00" Foreground="#FFB700"
+                BorderBrush="#C8860A" BorderThickness="1"
+                FontFamily="Consolas" FontSize="12"
+                Cursor="Hand"/>
+      </StackPanel>
     </Grid>
   </Border>
 </Window>
@@ -1166,6 +1175,13 @@ function Show-FirstTimeSetup {
             $J2 | Add-Member -NotePropertyName SetupComplete -NotePropertyValue $true -Force
             $J2 | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8
         } catch {}
+        Load-Settings
+        Rebuild-StatusRows
+        $SetupDlg.Close()
+    })
+
+    $SetupDlg.FindName('SkipBtn').Add_Click({
+        Save-SetupComplete
         Load-Settings
         Rebuild-StatusRows
         $SetupDlg.Close()
