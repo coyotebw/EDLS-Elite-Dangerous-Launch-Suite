@@ -74,6 +74,7 @@ function Load-Settings {
     $Defaults = [ordered]@{
         CmdrName           = "Epstein Didn't Kill Himself"
         EliteAppId         = 359320
+        SetupComplete      = $false
         Apps               = $DefaultApps
     }
 
@@ -96,6 +97,7 @@ function Load-Settings {
 
     $script:CmdrName          = if ($J.CmdrName)                    { $J.CmdrName }               else { $Defaults.CmdrName }
     $script:EliteAppId        = if ($null -ne $J.EliteAppId)        { [int]$J.EliteAppId }        else { $Defaults.EliteAppId }
+    $script:SetupComplete     = if ($null -ne $J.SetupComplete)     { [bool]$J.SetupComplete }    else { $false }
     $script:AutoStart         = if ($null -ne $J.AutoStart)         { [bool]$J.AutoStart }        else { $false }
     $script:ShowInactiveCards = if ($null -ne $J.ShowInactiveCards) { [bool]$J.ShowInactiveCards } else { $true }
     $script:AutoClose         = if ($null -ne $J.AutoClose)         { [bool]$J.AutoClose }        else { $false }
@@ -126,6 +128,17 @@ function Load-Settings {
 function Brush { param($Hex)
     [System.Windows.Media.SolidColorBrush]`
     [System.Windows.Media.ColorConverter]::ConvertFromString($Hex)
+}
+
+# ── SetupComplete flag persister ──────────────────────────
+function Save-SetupComplete {
+    try {
+        $J = Get-Content $script:SettingsFile -Raw -EA Stop |
+             ConvertFrom-Json -EA Stop
+        $J | Add-Member -NotePropertyName SetupComplete -NotePropertyValue $true -Force
+        $J | ConvertTo-Json -Depth 5 |
+             Set-Content $script:SettingsFile -Encoding UTF8
+    } catch {}
 }
 
 # ── AutoStart setting persister ───────────────────────────
@@ -1109,6 +1122,135 @@ $ShutdownBtn.Add_Click({
     }
 })
 
+# ── First-time setup dialog ───────────────────────────────
+function Show-FirstTimeSetup {
+    [xml]$FX = @'
+<Window
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Launch Suite — First-Time Setup"
+    Background="#080808" FontFamily="Consolas"
+    Width="480" Height="460"
+    ResizeMode="NoResize"
+    WindowStartupLocation="CenterOwner">
+
+  <Border Background="#111114" BorderBrush="#1C1C22" BorderThickness="1"
+          CornerRadius="6" Margin="12">
+    <Grid Margin="20">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+
+      <!-- Heading -->
+      <TextBlock Grid.Row="0" Text="W E L C O M E  T O  E D L S"
+                 Foreground="#FFB700" FontSize="15" FontWeight="Bold"
+                 Margin="0,0,0,10"/>
+
+      <!-- Description -->
+      <TextBlock Grid.Row="1"
+                 Text="Choose which companion programs you want EDLS to launch alongside Elite: Dangerous. You can change these at any time in Settings."
+                 Foreground="#C8860A" FontSize="11" TextWrapping="Wrap"
+                 Margin="0,0,0,18"/>
+
+      <!-- App checkboxes -->
+      <Border Grid.Row="2" Background="#0C0C0F" BorderBrush="#252530"
+              BorderThickness="1" CornerRadius="3" Padding="12,10">
+        <StackPanel Name="AppCheckPanel">
+          <CheckBox Name="ChkEDMC"      Content="ED Market Connector"             IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkSrvSurvey" Content="SrvSurvey"                       IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkOdyssey"   Content="Odyssey Materials Helper"        IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkEDCoPilot" Content="ED CoPilot"                      IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkEDHM"      Content="EDHM UI"                         IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkOpentrack" Content="opentrack"                       IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Button bar -->
+      <StackPanel Grid.Row="3" Orientation="Horizontal"
+                  HorizontalAlignment="Right" Margin="0,16,0,0">
+        <Button Name="SkipBtn" Content="SKIP"
+                Height="34" Width="90" Margin="0,0,8,0"
+                Background="#111114" Foreground="#666670"
+                BorderBrush="#2A2A35" BorderThickness="1"
+                FontFamily="Consolas" FontSize="12"
+                Cursor="Hand"/>
+        <Button Name="CompleteBtn" Content="COMPLETE SETUP"
+                Height="34"
+                Background="#140F00" Foreground="#FFB700"
+                BorderBrush="#C8860A" BorderThickness="1"
+                FontFamily="Consolas" FontSize="12"
+                Cursor="Hand"/>
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>
+'@
+
+    $SetupDlg = [System.Windows.Markup.XamlReader]::Load(
+        [System.Xml.XmlNodeReader]::new($FX))
+    $SetupDlg.Owner = $Window
+
+    # Reflect current Enabled state from loaded settings
+    $AppMap = @{
+        'EDMarketConnector' = 'ChkEDMC'
+        'SrvSurvey'         = 'ChkSrvSurvey'
+        'OdysseyMaterials'  = 'ChkOdyssey'
+        'EDCoPilot'         = 'ChkEDCoPilot'
+        'EDHM_UI'           = 'ChkEDHM'
+        'opentrack'         = 'ChkOpentrack'
+    }
+    try {
+        $JInit = Get-Content $script:SettingsFile -Raw -EA Stop | ConvertFrom-Json -EA Stop
+        foreach ($A in $JInit.Apps) {
+            if ($AppMap.ContainsKey($A.Name)) {
+                $SetupDlg.FindName($AppMap[$A.Name]).IsChecked = [bool]$A.Enabled
+            }
+        }
+    } catch {}
+
+    $SetupDlg.FindName('CompleteBtn').Add_Click({
+        try {
+            $J2 = Get-Content $script:SettingsFile -Raw -EA Stop | ConvertFrom-Json -EA Stop
+            $EnabledMap = @{
+                'EDMarketConnector' = $SetupDlg.FindName('ChkEDMC').IsChecked
+                'SrvSurvey'         = $SetupDlg.FindName('ChkSrvSurvey').IsChecked
+                'OdysseyMaterials'  = $SetupDlg.FindName('ChkOdyssey').IsChecked
+                'EDCoPilot'         = $SetupDlg.FindName('ChkEDCoPilot').IsChecked
+                'EDHM_UI'           = $SetupDlg.FindName('ChkEDHM').IsChecked
+                'opentrack'         = $SetupDlg.FindName('ChkOpentrack').IsChecked
+            }
+            foreach ($A in $J2.Apps) {
+                if ($EnabledMap.ContainsKey($A.Name)) {
+                    $A.Enabled = [bool]$EnabledMap[$A.Name]
+                }
+            }
+            $J2 | Add-Member -NotePropertyName SetupComplete -NotePropertyValue $true -Force
+            $J2 | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8
+        } catch {}
+        Load-Settings
+        Rebuild-StatusRows
+        $SetupDlg.Close()
+    })
+
+    $SetupDlg.FindName('SkipBtn').Add_Click({
+        Save-SetupComplete
+        Load-Settings
+        Rebuild-StatusRows
+        $SetupDlg.Close()
+    })
+
+    $SetupDlg.ShowDialog() | Out-Null
+}
+
 # ── Settings button ───────────────────────────────────────
 $SettingsBtn.Add_Click({
     Load-Settings
@@ -1322,6 +1464,11 @@ if ($script:AutoStart) {
 
 # Auto-trigger launch once window is fully rendered
 $Window.Add_Loaded({
+    # Show first-time setup dialog for new installs
+    if (-not $script:SetupComplete) {
+        Show-FirstTimeSetup
+    }
+
     if ($script:AutoStart) {
         $Dispatcher.BeginInvoke([Action]{
             try {
