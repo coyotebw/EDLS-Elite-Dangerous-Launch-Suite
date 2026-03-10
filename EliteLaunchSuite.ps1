@@ -776,17 +776,10 @@ function Save-WindowPositions {
     $savedCount = 0
 
     # Save EDLS own window position
-    $edlsHelper = [System.Windows.Interop.WindowInteropHelper]::new($Window)
-    $edlsHwnd   = $edlsHelper.Handle
-    if ($edlsHwnd -ne [IntPtr]::Zero) {
-        $rect = New-Object Win32Sizing+RECT
-        if ([Win32Sizing]::GetWindowRect($edlsHwnd, [ref]$rect)) {
-            $J | Add-Member -NotePropertyName LauncherX      -NotePropertyValue $rect.Left                  -Force
-            $J | Add-Member -NotePropertyName LauncherY      -NotePropertyValue $rect.Top                   -Force
-            $J | Add-Member -NotePropertyName LauncherWidth  -NotePropertyValue ($rect.Right  - $rect.Left) -Force
-            $J | Add-Member -NotePropertyName LauncherHeight -NotePropertyValue ($rect.Bottom - $rect.Top)  -Force
-        }
-    }
+    $J | Add-Member -NotePropertyName LauncherX      -NotePropertyValue ([int]$Window.Left)   -Force
+    $J | Add-Member -NotePropertyName LauncherY      -NotePropertyValue ([int]$Window.Top)    -Force
+    $J | Add-Member -NotePropertyName LauncherWidth  -NotePropertyValue ([int]$Window.Width)  -Force
+    $J | Add-Member -NotePropertyName LauncherHeight -NotePropertyValue ([int]$Window.Height) -Force
 
     # Save companion app window positions
     foreach ($Entry in $J.Apps) {
@@ -1577,15 +1570,10 @@ if ($script:AutoStart) {
 $Window.Add_Loaded({
     # Restore saved EDLS window position
     if ($null -ne $script:LauncherX) {
-        $edlsHwnd = [System.Windows.Interop.WindowInteropHelper]::new($Window).Handle
-        if ($edlsHwnd -ne [IntPtr]::Zero) {
-            [Win32Sizing]::SetWindowPos(
-                $edlsHwnd, [IntPtr]::Zero,
-                $script:LauncherX, $script:LauncherY,
-                $script:LauncherWidth, $script:LauncherHeight,
-                ([Win32Sizing]::SWP_NOZORDER -bor [Win32Sizing]::SWP_NOACTIVATE)
-            ) | Out-Null
-        }
+        $Window.Left   = $script:LauncherX
+        $Window.Top    = $script:LauncherY
+        $Window.Width  = $script:LauncherWidth
+        $Window.Height = $script:LauncherHeight
     }
 
     # Show first-time setup dialog for new installs
