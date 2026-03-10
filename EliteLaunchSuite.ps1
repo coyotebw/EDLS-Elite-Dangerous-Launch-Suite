@@ -123,7 +123,15 @@ function Load-Settings {
                 -Filter SrvSurvey.exe -Recurse -EA SilentlyContinue |
                 Select-Object -First 1 -ExpandProperty FullName }
         } else { $null }
-        $script:Apps += @{ Name = $E.Name; Process = $E.Process; Path = $P }
+        $script:Apps += @{
+            Name         = $E.Name
+            Process      = $E.Process
+            Path         = $P
+            WindowX      = if ($null -ne $E.WindowX)      { [int]$E.WindowX }      else { $null }
+            WindowY      = if ($null -ne $E.WindowY)      { [int]$E.WindowY }      else { $null }
+            WindowWidth  = if ($null -ne $E.WindowWidth)  { [int]$E.WindowWidth }  else { $null }
+            WindowHeight = if ($null -ne $E.WindowHeight) { [int]$E.WindowHeight } else { $null }
+        }
     }
 }
 
@@ -433,6 +441,12 @@ del "%~f0"
                   Background="#CC111114" Foreground="#666670"
                   BorderBrush="#2A2A35" BorderThickness="1"
                   FontSize="17" Cursor="Hand"/>
+          <Button Name="SavePosBtn"
+                  Content="SAVE POS" Style="{StaticResource DiagBtn}"
+                  Width="160" Height="52" Margin="0,0,-11,0"
+                  Background="#CC111114" Foreground="#666670"
+                  BorderBrush="#2A2A35" BorderThickness="1"
+                  FontSize="15" Cursor="Hand"/>
           <Button Name="LaunchBtn"
                   Content="LAUNCH" Style="{StaticResource DiagBtn}"
                   Width="220" Height="52"
@@ -458,6 +472,7 @@ $LaunchBtn       = $Window.FindName('LaunchBtn')
 $SettingsBtn     = $Window.FindName('SettingsBtn')
 $AutoStartBtn    = $Window.FindName('AutoStartBtn')
 $ShutdownBtn     = $Window.FindName('ShutdownBtn')
+$SavePosBtn      = $Window.FindName('SavePosBtn')
 $TitleBarCard    = $Window.FindName('TitleBarCard')
 $LogDocument     = $LogBox.Document
 $Dispatcher      = $Window.Dispatcher
@@ -473,6 +488,14 @@ public static class Win32Sizing {
     public const int WMSZ_TOP     = 3;
     public const int WMSZ_TOPLEFT = 4;
     public const int WMSZ_TOPRIGHT= 5;
+
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    [DllImport("user32.dll")]
+    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+        int X, int Y, int cx, int cy, uint uFlags);
+    public const uint SWP_NOZORDER   = 0x0004;
+    public const uint SWP_NOACTIVATE = 0x0010;
 
     public static void Enforce(IntPtr lParam, int edge, double ratio) {
         RECT r = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
@@ -748,6 +771,28 @@ function Rebuild-StatusRows {
     }
 }
 
+# ── Window position persistence ───────────────────────────
+function Save-WindowPositions {
+    $J = Get-Content $script:SettingsFile -Raw | ConvertFrom-Json
+    $savedCount = 0
+    foreach ($Entry in $J.Apps) {
+        $proc = Get-Process -Name $Entry.Process -EA SilentlyContinue | Select-Object -First 1
+        if ($proc -and $proc.MainWindowHandle -ne [IntPtr]::Zero) {
+            $rect = New-Object Win32Sizing+RECT
+            if ([Win32Sizing]::GetWindowRect($proc.MainWindowHandle, [ref]$rect)) {
+                $Entry | Add-Member -NotePropertyName WindowX      -NotePropertyValue $rect.Left                  -Force
+                $Entry | Add-Member -NotePropertyName WindowY      -NotePropertyValue $rect.Top                   -Force
+                $Entry | Add-Member -NotePropertyName WindowWidth  -NotePropertyValue ($rect.Right  - $rect.Left) -Force
+                $Entry | Add-Member -NotePropertyName WindowHeight -NotePropertyValue ($rect.Bottom - $rect.Top)  -Force
+                $savedCount++
+            }
+        }
+    }
+    $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8
+    Load-Settings
+    Write-UILog "Window positions saved for $savedCount app(s)." -Level Success
+}
+
 # ── UI log writer (main thread) ───────────────────────────
 function Write-UILog { param($Message, [string]$Level = 'Info')
     $Color = switch ($Level) {
@@ -935,6 +980,22 @@ $LaunchScript = {
                 UiStatus $App.Name 'Online' '#44CC44'
                 UiPid $App.Name $P.Id
                 UiLog "$($App.Name) online. (PID: $($P.Id))" -Lvl Success
+                if ($null -ne $App.WindowX) {
+                    $deadline = (Get-Date).AddSeconds(10)
+                    do {
+                        Start-Sleep -Milliseconds 300
+                        try { $P.Refresh() } catch {}
+                    } while ($P.MainWindowHandle -eq [IntPtr]::Zero -and (Get-Date) -lt $deadline)
+                    if ($P.MainWindowHandle -ne [IntPtr]::Zero) {
+                        [Win32Sizing]::SetWindowPos(
+                            $P.MainWindowHandle, [IntPtr]::Zero,
+                            $App.WindowX, $App.WindowY,
+                            $App.WindowWidth, $App.WindowHeight,
+                            ([Win32Sizing]::SWP_NOZORDER -bor [Win32Sizing]::SWP_NOACTIVATE)
+                        ) | Out-Null
+                        UiLog "$($App.Name) window positioned at ($($App.WindowX),$($App.WindowY))." -Lvl Dim
+                    }
+                }
             } catch {
                 UiLog "Failed to launch $($App.Name): $_" -Lvl Warning
                 UiStatus $App.Name 'Failed' '#CC4444'
@@ -1122,6 +1183,14 @@ $ShutdownBtn.Add_Click({
         }
     } catch {
         Write-UILog "Shutdown error: $_" -Level Error
+    }
+})
+
+$SavePosBtn.Add_Click({
+    try {
+        Save-WindowPositions
+    } catch {
+        Write-UILog "Failed to save positions: $_" -Level Warning
     }
 })
 
@@ -1411,12 +1480,23 @@ $SettingsBtn.Add_Click({
 
     $SaveBtn.Add_Click({
         try {
+            $posMap = @{}
+            foreach ($rawApp in $RawJson.Apps) {
+                if ($rawApp.Name -and $null -ne $rawApp.WindowX) {
+                    $posMap[$rawApp.Name] = $rawApp
+                }
+            }
             $NewApps = @($AppsGrid.ItemsSource | ForEach-Object {
+                $p = $posMap[$_.Name]
                 [ordered]@{
-                    Name    = "$($_.Name)"
-                    Process = "$($_.Process)"
-                    Path    = if ($_.Path) { "$($_.Path)" } else { $null }
-                    Enabled = [bool]$_.Enabled
+                    Name         = "$($_.Name)"
+                    Process      = "$($_.Process)"
+                    Path         = if ($_.Path) { "$($_.Path)" } else { $null }
+                    Enabled      = [bool]$_.Enabled
+                    WindowX      = if ($p) { [int]$p.WindowX }      else { $null }
+                    WindowY      = if ($p) { [int]$p.WindowY }      else { $null }
+                    WindowWidth  = if ($p) { [int]$p.WindowWidth }  else { $null }
+                    WindowHeight = if ($p) { [int]$p.WindowHeight } else { $null }
                 }
             })
             [ordered]@{
