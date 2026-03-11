@@ -69,6 +69,36 @@ function Load-Settings {
             Process = 'opentrack'
             Path    = '%ProgramFiles(x86)%\opentrack\opentrack.exe'
             Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'ICARUS Terminal'
+            Process = 'ICARUS Terminal'
+            Path    = '%ProgramFiles(x86)%\ICARUS Terminal\ICARUS Terminal.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'EDDiscovery'
+            Process = 'EDDiscovery'
+            Path    = '%ProgramFiles%\EDDiscovery\EDDiscovery.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'VoiceAttack'
+            Process = 'VoiceAttack'
+            Path    = '%ProgramFiles%\VoiceAttack\VoiceAttack.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'EDCoPTER'
+            Process = 'EDCoPTER'
+            Path    = '%LOCALAPPDATA%\Programs\EDCoPTER\EDCoPTER.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'Elite Observatory'
+            Process = 'ObservatoryCore'
+            Path    = '%LOCALAPPDATA%\Programs\Elite Observatory\ObservatoryCore.exe'
+            Enabled = $true
         }
     )
     $Defaults = [ordered]@{
