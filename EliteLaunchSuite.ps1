@@ -1282,7 +1282,7 @@ function Show-FirstTimeSetup {
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Launch Suite — First-Time Setup"
     Background="#080808" FontFamily="Consolas"
-    Width="480" Height="460"
+    Width="480" Height="620"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterOwner">
 
@@ -1321,7 +1321,17 @@ function Show-FirstTimeSetup {
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkEDHM"      Content="EDHM UI"                         IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkOpentrack" Content="opentrack"                       IsChecked="True"
+          <CheckBox Name="ChkOpentrack"   Content="opentrack"                     IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkIcarus"      Content="ICARUS Terminal"               IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkEDDiscovery" Content="EDDiscovery"                   IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkVoiceAttack" Content="VoiceAttack"                   IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkEDCoPTER"    Content="EDCoPTER"                      IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkObservatory" Content="Elite Observatory"             IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
         </StackPanel>
       </Border>
@@ -1359,6 +1369,11 @@ function Show-FirstTimeSetup {
         'EDCoPilot'         = 'ChkEDCoPilot'
         'EDHM_UI'           = 'ChkEDHM'
         'opentrack'         = 'ChkOpentrack'
+        'ICARUS Terminal'   = 'ChkIcarus'
+        'EDDiscovery'       = 'ChkEDDiscovery'
+        'VoiceAttack'       = 'ChkVoiceAttack'
+        'EDCoPTER'          = 'ChkEDCoPTER'
+        'Elite Observatory' = 'ChkObservatory'
     }
     try {
         $JInit = Get-Content $script:SettingsFile -Raw -EA Stop | ConvertFrom-Json -EA Stop
@@ -1379,6 +1394,11 @@ function Show-FirstTimeSetup {
                 'EDCoPilot'         = $SetupDlg.FindName('ChkEDCoPilot').IsChecked
                 'EDHM_UI'           = $SetupDlg.FindName('ChkEDHM').IsChecked
                 'opentrack'         = $SetupDlg.FindName('ChkOpentrack').IsChecked
+                'ICARUS Terminal'   = $SetupDlg.FindName('ChkIcarus').IsChecked
+                'EDDiscovery'       = $SetupDlg.FindName('ChkEDDiscovery').IsChecked
+                'VoiceAttack'       = $SetupDlg.FindName('ChkVoiceAttack').IsChecked
+                'EDCoPTER'          = $SetupDlg.FindName('ChkEDCoPTER').IsChecked
+                'Elite Observatory' = $SetupDlg.FindName('ChkObservatory').IsChecked
             }
             foreach ($A in $J2.Apps) {
                 if ($EnabledMap.ContainsKey($A.Name)) {
