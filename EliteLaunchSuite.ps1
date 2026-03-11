@@ -77,7 +77,7 @@ function Load-Settings {
         SetupComplete      = $false
         AutoStart          = $false
         ShowInactiveCards  = $true
-        AutoClose          = $false
+        AutoClose          = $true
         Apps               = $DefaultApps
     }
 
@@ -983,7 +983,8 @@ $LaunchScript = {
         if ($AutoClose) {
             UiLog 'Closing launcher in 5 seconds...' -Lvl Dim
             Start-Sleep -Seconds 5
-            $Dispatcher.BeginInvoke([Action]{ $Window.Close() })
+            $w = $Window
+            $Dispatcher.BeginInvoke([Action]{ $w.Close() })
         }
 
     } catch {
@@ -1119,6 +1120,15 @@ $ShutdownBtn.Add_Click({
             Write-UILog 'Third-party tools shut down.' -Level Success
         } else {
             Write-UILog 'No tools running.' -Level Dim
+        }
+
+        if ($script:AutoClose) {
+            Write-UILog 'Closing launcher in 5 seconds...' -Level Dim
+            $ct = [System.Windows.Threading.DispatcherTimer]::new()
+            $ct.Interval = [TimeSpan]::FromSeconds(5)
+            $t = $ct; $w = $Window
+            $ct.Add_Tick({ $t.Stop(); $w.Close() })
+            $ct.Start()
         }
     } catch {
         Write-UILog "Shutdown error: $_" -Level Error
