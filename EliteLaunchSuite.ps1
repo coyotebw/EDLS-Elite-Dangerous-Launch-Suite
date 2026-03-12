@@ -69,6 +69,36 @@ function Load-Settings {
             Process = 'opentrack'
             Path    = '%ProgramFiles(x86)%\opentrack\opentrack.exe'
             Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'ICARUS Terminal'
+            Process = 'ICARUS Terminal'
+            Path    = '%ProgramFiles(x86)%\ICARUS Terminal\ICARUS Terminal.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'EDDiscovery'
+            Process = 'EDDiscovery'
+            Path    = '%ProgramFiles%\EDDiscovery\EDDiscovery.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'VoiceAttack'
+            Process = 'VoiceAttack'
+            Path    = '%ProgramFiles%\VoiceAttack\VoiceAttack.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'EDCoPTER'
+            Process = 'EDCoPTER'
+            Path    = '%LOCALAPPDATA%\Programs\EDCoPTER\EDCoPTER.exe'
+            Enabled = $true
+        },
+        [ordered]@{
+            Name    = 'Elite Observatory'
+            Process = 'ObservatoryCore'
+            Path    = '%LOCALAPPDATA%\Programs\Elite Observatory\ObservatoryCore.exe'
+            Enabled = $true
         }
     )
     $Defaults = [ordered]@{
@@ -77,8 +107,8 @@ function Load-Settings {
         SetupComplete      = $false
         AutoStart          = $false
         ShowInactiveCards  = $true
-        AutoClose          = $false
-        SavePos            = $false
+        AutoClose          = $true
+        SavePos            = $true
         Apps               = $DefaultApps
     }
 
@@ -666,6 +696,14 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
         $cd1.Width = [System.Windows.GridLength]::Auto
         $InnerGrid.ColumnDefinitions.Add($cd0)
         $InnerGrid.ColumnDefinitions.Add($cd1)
+    } elseif ($Key -ne 'Steam' -and -not $IsInactive) {
+        # Col 0 (*): label + status text + PID  |  Col 1 (Auto): START/STOP control button
+        $cd0 = [System.Windows.Controls.ColumnDefinition]::new()
+        $cd0.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+        $cd1 = [System.Windows.Controls.ColumnDefinition]::new()
+        $cd1.Width = [System.Windows.GridLength]::Auto
+        $InnerGrid.ColumnDefinitions.Add($cd0)
+        $InnerGrid.ColumnDefinitions.Add($cd1)
     }
 
     # Row 0, Col 0: small dot indicator + app name label
@@ -690,7 +728,9 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
 
     $InnerGrid.Children.Add($LabelRow) | Out-Null
 
-    # Row 0 right side: INACTIVE badge for disabled apps
+    # Row 0 right side: INACTIVE badge for disabled apps (unchanged),
+    # or START/STOP control button for enabled companion apps
+    $CtrlBtn = $null
     if ($IsInactive) {
         $InactiveTB = [System.Windows.Controls.TextBlock]::new()
         $InactiveTB.Text              = 'INACTIVE'
@@ -702,6 +742,87 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
         # Elite has Col 1; non-Elite single-column cell is full-width so right-align works
         if ($isElite) { [System.Windows.Controls.Grid]::SetColumn($InactiveTB, 1) }
         $InnerGrid.Children.Add($InactiveTB) | Out-Null
+    } elseif ($Key -ne 'Steam' -and -not $isElite) {
+        $CtrlBtn = [System.Windows.Controls.Button]::new()
+        $CtrlBtn.Tag             = $Key
+        $CtrlBtn.Height          = 20
+        $CtrlBtn.Padding         = [System.Windows.Thickness]::new(6,2,6,2)
+        $CtrlBtn.FontSize        = 9
+        $CtrlBtn.FontWeight      = [System.Windows.FontWeights]::Bold
+        $CtrlBtn.BorderThickness = [System.Windows.Thickness]::new(1)
+        $CtrlBtn.Cursor          = [System.Windows.Input.Cursors]::Hand
+        $CtrlBtn.VerticalAlignment   = 'Center'
+        $CtrlBtn.HorizontalAlignment = 'Right'
+        $CtrlBtn.Content     = 'START'
+        $CtrlBtn.Background  = Brush '#0D1A0D'
+        $CtrlBtn.Foreground  = Brush '#44AA44'
+        $CtrlBtn.BorderBrush = Brush '#226622'
+
+        $CtrlBtn.Add_Click({
+            param($sender, $e)
+            $k        = $sender.Tag
+            $appEntry = $script:AllApps | Where-Object { $_.Name -eq $k } | Select-Object -First 1
+            if (-not $appEntry) { return }
+            $Running = Get-Process -Name $appEntry.Process -EA SilentlyContinue | Select-Object -First 1
+
+            if ($Running) {
+                try { $Running | Stop-Process -Force -EA Stop } catch {}
+                $row = $script:StatusRows[$k]
+                if ($row) {
+                    $row.Dot.Fill           = Brush '#484850'
+                    $row.StateTB.Text       = 'Stopped'
+                    $row.StateTB.Foreground = Brush '#484850'
+                    if ($row.PidTB) { $row.PidTB.Text = '' }
+                    if ($row.CtrlBtn) {
+                        $row.CtrlBtn.Content     = 'START'
+                        $row.CtrlBtn.Background  = Brush '#0D1A0D'
+                        $row.CtrlBtn.Foreground  = Brush '#44AA44'
+                        $row.CtrlBtn.BorderBrush = Brush '#226622'
+                    }
+                }
+            } else {
+                $enabledEntry = $script:Apps | Where-Object { $_.Name -eq $k } | Select-Object -First 1
+                $resolvedPath = if ($enabledEntry) { $enabledEntry.Path } else { $null }
+                if ($resolvedPath -is [scriptblock]) { $resolvedPath = & $resolvedPath }
+                if (-not $resolvedPath -or -not (Test-Path $resolvedPath)) {
+                    $row = $script:StatusRows[$k]
+                    if ($row -and $row.CtrlBtn) {
+                        $row.CtrlBtn.IsEnabled   = $false
+                        $row.CtrlBtn.Background  = Brush '#0D0D0F'
+                        $row.CtrlBtn.Foreground  = Brush '#303038'
+                        $row.CtrlBtn.BorderBrush = Brush '#1E1E28'
+                    }
+                    return
+                }
+                try {
+                    $P   = Start-Process $resolvedPath -PassThru -EA Stop
+                    $row = $script:StatusRows[$k]
+                    if ($row) {
+                        $row.Dot.Fill           = Brush '#44CC44'
+                        $row.StateTB.Text       = 'Online'
+                        $row.StateTB.Foreground = Brush '#44CC44'
+                        if ($row.PidTB -and $P) { $row.PidTB.Text = "PID $($P.Id)" }
+                        if ($row.CtrlBtn) {
+                            $row.CtrlBtn.Content     = 'STOP'
+                            $row.CtrlBtn.Background  = Brush '#1A0D0D'
+                            $row.CtrlBtn.Foreground  = Brush '#CC4444'
+                            $row.CtrlBtn.BorderBrush = Brush '#661122'
+                        }
+                    }
+                } catch {
+                    $row = $script:StatusRows[$k]
+                    if ($row) {
+                        $row.Dot.Fill           = Brush '#CC4444'
+                        $row.StateTB.Text       = 'Failed'
+                        $row.StateTB.Foreground = Brush '#CC4444'
+                    }
+                }
+            }
+        })
+
+        [System.Windows.Controls.Grid]::SetRow($CtrlBtn, 0)
+        [System.Windows.Controls.Grid]::SetColumn($CtrlBtn, 1)
+        $InnerGrid.Children.Add($CtrlBtn) | Out-Null
     }
 
     # Row 1, Col 0: main status text
@@ -755,7 +876,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
 
     $Card.Child = $InnerGrid
     $StatusPanel.Children.Add($Card) | Out-Null
-    $script:StatusRows[$Key] = @{ Dot = $Dot; StateTB = $StateTB; TimerTB = $TimerTB; PidTB = $PidTB }
+    $script:StatusRows[$Key] = @{ Dot = $Dot; StateTB = $StateTB; TimerTB = $TimerTB; PidTB = $PidTB; CtrlBtn = $CtrlBtn }
 }
 
 function Rebuild-StatusRows {
@@ -886,12 +1007,24 @@ $LaunchScript = {
                               [bool]$ClearPid = $false)
         $row = $StatusRows[$Key]; if (-not $row) { return }
         $c = $Color; $s = $State; $ct = $ClearTimer; $cp = $ClearPid
+        $isRunning = ($s -eq 'Online' -or $s -eq 'Launching…' -or $s -eq 'Running')
+        if ($isRunning) {
+            $btnBg = '#1A0D0D'; $btnFg = '#CC4444'; $btnBr = '#661122'; $btnTxt = 'STOP'
+        } else {
+            $btnBg = '#0D1A0D'; $btnFg = '#44AA44'; $btnBr = '#226622'; $btnTxt = 'START'
+        }
         $Dispatcher.Invoke([Action]{
             $row.Dot.Fill           = RsBrush $c
             $row.StateTB.Text       = $s
             $row.StateTB.Foreground = RsBrush $c
             if ($ct) { $row.TimerTB.Text = '' }
             if ($cp -and $row.PidTB) { $row.PidTB.Text = '' }
+            if ($row.CtrlBtn -and $row.CtrlBtn.IsEnabled) {
+                $row.CtrlBtn.Content     = $btnTxt
+                $row.CtrlBtn.Background  = RsBrush $btnBg
+                $row.CtrlBtn.Foreground  = RsBrush $btnFg
+                $row.CtrlBtn.BorderBrush = RsBrush $btnBr
+            }
         })
     }
 
@@ -1060,7 +1193,8 @@ $LaunchScript = {
         if ($AutoClose) {
             UiLog 'Closing launcher in 5 seconds...' -Lvl Dim
             Start-Sleep -Seconds 5
-            $Dispatcher.BeginInvoke([Action]{ $Window.Close() })
+            $w = $Window
+            $Dispatcher.BeginInvoke([Action]{ $w.Close() })
         }
 
     } catch {
@@ -1189,6 +1323,12 @@ $ShutdownBtn.Add_Click({
                     $row.StateTB.Text       = 'Closed'
                     $row.StateTB.Foreground = Brush '#484850'
                     if ($row.PidTB) { $row.PidTB.Text = '' }
+                    if ($row.CtrlBtn -and $row.CtrlBtn.IsEnabled) {
+                        $row.CtrlBtn.Content     = 'START'
+                        $row.CtrlBtn.Background  = Brush '#0D1A0D'
+                        $row.CtrlBtn.Foreground  = Brush '#44AA44'
+                        $row.CtrlBtn.BorderBrush = Brush '#226622'
+                    }
                 }
             }
         }
@@ -1196,6 +1336,15 @@ $ShutdownBtn.Add_Click({
             Write-UILog 'Third-party tools shut down.' -Level Success
         } else {
             Write-UILog 'No tools running.' -Level Dim
+        }
+
+        if ($script:AutoClose) {
+            Write-UILog 'Closing launcher in 5 seconds...' -Level Dim
+            $ct = [System.Windows.Threading.DispatcherTimer]::new()
+            $ct.Interval = [TimeSpan]::FromSeconds(5)
+            $t = $ct; $w = $Window
+            $ct.Add_Tick({ $t.Stop(); $w.Close() })
+            $ct.Start()
         }
     } catch {
         Write-UILog "Shutdown error: $_" -Level Error
@@ -1210,7 +1359,7 @@ function Show-FirstTimeSetup {
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Launch Suite — First-Time Setup"
     Background="#080808" FontFamily="Consolas"
-    Width="480" Height="460"
+    Width="480" Height="620"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterOwner">
 
@@ -1249,7 +1398,17 @@ function Show-FirstTimeSetup {
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkEDHM"      Content="EDHM UI"                         IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkOpentrack" Content="opentrack"                       IsChecked="True"
+          <CheckBox Name="ChkOpentrack"   Content="opentrack"                     IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkIcarus"      Content="ICARUS Terminal"               IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkEDDiscovery" Content="EDDiscovery"                   IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkVoiceAttack" Content="VoiceAttack"                   IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkEDCoPTER"    Content="EDCoPTER"                      IsChecked="True"
+                    Foreground="#C8860A" FontSize="11" Margin="0,4"/>
+          <CheckBox Name="ChkObservatory" Content="Elite Observatory"             IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
         </StackPanel>
       </Border>
@@ -1287,6 +1446,11 @@ function Show-FirstTimeSetup {
         'EDCoPilot'         = 'ChkEDCoPilot'
         'EDHM_UI'           = 'ChkEDHM'
         'opentrack'         = 'ChkOpentrack'
+        'ICARUS Terminal'   = 'ChkIcarus'
+        'EDDiscovery'       = 'ChkEDDiscovery'
+        'VoiceAttack'       = 'ChkVoiceAttack'
+        'EDCoPTER'          = 'ChkEDCoPTER'
+        'Elite Observatory' = 'ChkObservatory'
     }
     try {
         $JInit = Get-Content $script:SettingsFile -Raw -EA Stop | ConvertFrom-Json -EA Stop
@@ -1307,6 +1471,11 @@ function Show-FirstTimeSetup {
                 'EDCoPilot'         = $SetupDlg.FindName('ChkEDCoPilot').IsChecked
                 'EDHM_UI'           = $SetupDlg.FindName('ChkEDHM').IsChecked
                 'opentrack'         = $SetupDlg.FindName('ChkOpentrack').IsChecked
+                'ICARUS Terminal'   = $SetupDlg.FindName('ChkIcarus').IsChecked
+                'EDDiscovery'       = $SetupDlg.FindName('ChkEDDiscovery').IsChecked
+                'VoiceAttack'       = $SetupDlg.FindName('ChkVoiceAttack').IsChecked
+                'EDCoPTER'          = $SetupDlg.FindName('ChkEDCoPTER').IsChecked
+                'Elite Observatory' = $SetupDlg.FindName('ChkObservatory').IsChecked
             }
             foreach ($A in $J2.Apps) {
                 if ($EnabledMap.ContainsKey($A.Name)) {
