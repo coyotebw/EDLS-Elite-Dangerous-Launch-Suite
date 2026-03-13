@@ -1374,13 +1374,11 @@ function Show-FirstTimeSetup {
       </Grid.RowDefinitions>
 
       <!-- Heading -->
-      <TextBlock Grid.Row="0" Text="W E L C O M E  T O  E D L S"
                  Foreground="#FFB700" FontSize="15" FontWeight="Bold"
                  Margin="0,0,0,10"/>
 
       <!-- Description -->
       <TextBlock Grid.Row="1"
-                 Text="Choose which companion programs you want EDLS to launch alongside Elite: Dangerous. You can change these at any time in Settings."
                  Foreground="#C8860A" FontSize="11" TextWrapping="Wrap"
                  Margin="0,0,0,18"/>
 
@@ -1393,22 +1391,31 @@ function Show-FirstTimeSetup {
           <CheckBox Name="ChkSrvSurvey" Content="SrvSurvey"                       IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkOdyssey"   Content="Odyssey Materials Helper"        IsChecked="True"
+          <CheckBox Name="ChkOdyssey"   Content="Odyssey Materials Helper"        IsChecked="False"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkEDCoPilot" Content="ED CoPilot"                      IsChecked="True"
+          <CheckBox Name="ChkEDCoPilot" Content="ED CoPilot"                      IsChecked="False"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkEDHM"      Content="EDHM UI"                         IsChecked="True"
+          <CheckBox Name="ChkEDHM"      Content="EDHM UI"                         IsChecked="False"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkOpentrack"   Content="opentrack"                     IsChecked="True"
+          <CheckBox Name="ChkOpentrack"   Content="opentrack"                     IsChecked="False"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkIcarus"      Content="ICARUS Terminal"               IsChecked="True"
+          <CheckBox Name="ChkIcarus"      Content="ICARUS Terminal"               IsChecked="False"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkEDDiscovery" Content="EDDiscovery"                   IsChecked="True"
+          <CheckBox Name="ChkEDDiscovery" Content="EDDiscovery"                   IsChecked="False"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkVoiceAttack" Content="VoiceAttack"                   IsChecked="True"
+          <CheckBox Name="ChkVoiceAttack" Content="VoiceAttack"                   IsChecked="False"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkEDCoPTER"    Content="EDCoPTER"                      IsChecked="True"
+          <CheckBox Name="ChkEDCoPTER"    Content="EDCoPTER"                      IsChecked="False"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkObservatory" Content="Elite Observatory"             IsChecked="True"
+          <CheckBox Name="ChkObservatory" Content="Elite Observatory"             IsChecked="False"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
         </StackPanel>
       </Border>
@@ -1422,8 +1429,6 @@ function Show-FirstTimeSetup {
                 BorderBrush="#2A2A35" BorderThickness="1"
                 FontFamily="Consolas" FontSize="12"
                 Cursor="Hand"/>
-        <Button Name="CompleteBtn" Content="COMPLETE SETUP"
-                Height="34"
                 Background="#140F00" Foreground="#FFB700"
                 BorderBrush="#C8860A" BorderThickness="1"
                 FontFamily="Consolas" FontSize="12"
@@ -1508,7 +1513,6 @@ $SettingsBtn.Add_Click({
 <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Launch Suite — Settings"
     Background="#080808" FontFamily="Consolas"
     Width="640" Height="520"
     ResizeMode="NoResize"
