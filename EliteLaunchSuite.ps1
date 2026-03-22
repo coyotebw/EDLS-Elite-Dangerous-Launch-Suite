@@ -955,7 +955,7 @@ function Write-UILog { param($Message, [string]$Level = 'Info')
         if ($doc.Blocks.Count -gt 100) { $doc.Blocks.Remove($doc.Blocks.FirstBlock) }
         $doc.Blocks.Add($p)
         $box.ScrollToEnd()
-    })
+    }.GetNewClosure())
 }
 
 # ── Shared state (thread-safe) ────────────────────────────
@@ -1209,7 +1209,7 @@ $LaunchScript = {
             UiLog 'Closing launcher in 5 seconds...' -Lvl Dim
             Start-Sleep -Seconds 5
             $w = $Window
-            $Dispatcher.BeginInvoke([Action]{ $w.Close() })
+            $Dispatcher.BeginInvoke([Action]{ $w.Close() }.GetNewClosure())
         }
 
     } catch {
@@ -1360,7 +1360,7 @@ $ShutdownBtn.Add_Click({
             $ct = [System.Windows.Threading.DispatcherTimer]::new()
             $ct.Interval = [TimeSpan]::FromSeconds(5)
             $t = $ct; $w = $Window
-            $ct.Add_Tick({ $t.Stop(); $w.Close() })
+            $ct.Add_Tick({ $t.Stop(); $w.Close() }.GetNewClosure())
             $ct.Start()
         }
     } catch {
