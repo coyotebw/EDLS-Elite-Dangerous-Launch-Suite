@@ -233,7 +233,7 @@ $SelfVersionScript = {
             $r = [System.Windows.Documents.Run]::new($l)
             $r.Foreground = RsBrush $c
             $p.Inlines.Add($r)
-            if ($d.Blocks.Count -gt 500) { $d.Blocks.Remove($d.Blocks.FirstBlock) }
+            if ($d.Blocks.Count -gt 100) { $d.Blocks.Remove($d.Blocks.FirstBlock) }
             $d.Blocks.Add($p)
             $b.ScrollToEnd()
         })
@@ -595,7 +595,12 @@ function Load-ImageBrush([string]$RelPath, [string]$Stretch) {
     }
     try {
         $uri   = [System.Uri]::new($full, [System.UriKind]::Absolute)
-        $bmp   = [System.Windows.Media.Imaging.BitmapImage]::new($uri)
+        $bmp   = [System.Windows.Media.Imaging.BitmapImage]::new()
+        $bmp.BeginInit()
+        $bmp.UriSource   = $uri
+        $bmp.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+        $bmp.EndInit()
+        $bmp.Freeze()
         $brush = [System.Windows.Media.ImageBrush]::new($bmp)
         $brush.Stretch = [System.Windows.Media.Stretch]$Stretch
         return $brush
@@ -617,17 +622,26 @@ if ($_b) { $TitleBarCard.Background = $_b }
 $OutpostImage    = $Window.FindName('OutpostImage')
 $_outpostPath = Join-Path $_appDir 'assets\outpost.png'
 if (Test-Path $_outpostPath) {
-    $OutpostImage.Source = [System.Windows.Media.Imaging.BitmapImage]::new(
-        [System.Uri]::new($_outpostPath, [System.UriKind]::Absolute)
-    )
+    $bmp = [System.Windows.Media.Imaging.BitmapImage]::new()
+    $bmp.BeginInit()
+    $bmp.UriSource   = [System.Uri]::new($_outpostPath, [System.UriKind]::Absolute)
+    $bmp.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+    $bmp.EndInit()
+    $bmp.Freeze()
+    $OutpostImage.Source = $bmp
 }
 
 # ── Window icon ───────────────────────────────────────────
 $_iconFull = Join-Path $_appDir 'assets\icon.ico'
 if (Test-Path $_iconFull) {
     try {
-        $Window.Icon = [System.Windows.Media.Imaging.BitmapImage]::new(
-            [System.Uri]::new($_iconFull, [System.UriKind]::Absolute))
+        $bmp = [System.Windows.Media.Imaging.BitmapImage]::new()
+        $bmp.BeginInit()
+        $bmp.UriSource   = [System.Uri]::new($_iconFull, [System.UriKind]::Absolute)
+        $bmp.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+        $bmp.EndInit()
+        $bmp.Freeze()
+        $Window.Icon = $bmp
     } catch {
         Add-Content -Path $script:LogFile -Value "[assets] failed to load icon: $_" -EA SilentlyContinue
     }
@@ -938,10 +952,10 @@ function Write-UILog { param($Message, [string]$Level = 'Info')
         $r.Foreground = [System.Windows.Media.SolidColorBrush]`
             [System.Windows.Media.ColorConverter]::ConvertFromString($c)
         $p.Inlines.Add($r)
-        if ($doc.Blocks.Count -gt 500) { $doc.Blocks.Remove($doc.Blocks.FirstBlock) }
+        if ($doc.Blocks.Count -gt 100) { $doc.Blocks.Remove($doc.Blocks.FirstBlock) }
         $doc.Blocks.Add($p)
         $box.ScrollToEnd()
-    })
+    }.GetNewClosure())
 }
 
 # ── Shared state (thread-safe) ────────────────────────────
@@ -950,7 +964,7 @@ $SharedState = [hashtable]::Synchronized(@{ EliteStartTime = $null })
 # ── Elapsed timer (UI thread) ─────────────────────────────
 $ElapsedTimer = [System.Windows.Threading.DispatcherTimer]::new()
 $ElapsedTimer.Interval = [TimeSpan]::FromSeconds(1)
-$ElapsedTimer.Add_Tick({
+$script:ElapsedTickHandler = {
     try {
         $t = $SharedState['EliteStartTime']
         if ($t) {
@@ -966,7 +980,8 @@ $ElapsedTimer.Add_Tick({
             -Value "[$(Get-Date -Format 'HH:mm:ss')] [WARN] ElapsedTimer tick error: $_" `
             -EA SilentlyContinue
     }
-})
+}
+$ElapsedTimer.Add_Tick($script:ElapsedTickHandler)
 
 # ── Background launch scriptblock ─────────────────────────
 # Variables injected via InitialSessionState:
@@ -996,7 +1011,7 @@ $LaunchScript = {
             $r = [System.Windows.Documents.Run]::new($l)
             $r.Foreground = RsBrush $c
             $p.Inlines.Add($r)
-            if ($d.Blocks.Count -gt 500) { $d.Blocks.Remove($d.Blocks.FirstBlock) }
+            if ($d.Blocks.Count -gt 100) { $d.Blocks.Remove($d.Blocks.FirstBlock) }
             $d.Blocks.Add($p)
             $b.ScrollToEnd()
         })
@@ -1194,7 +1209,7 @@ $LaunchScript = {
             UiLog 'Closing launcher in 5 seconds...' -Lvl Dim
             Start-Sleep -Seconds 5
             $w = $Window
-            $Dispatcher.BeginInvoke([Action]{ $w.Close() })
+            $Dispatcher.BeginInvoke([Action]{ $w.Close() }.GetNewClosure())
         }
 
     } catch {
@@ -1271,6 +1286,8 @@ $LaunchBtn.Add_Click({
 # ── Cleanup on window close ───────────────────────────────
 $Window.Add_Closed({
     $ElapsedTimer.Stop()
+    $ElapsedTimer.Remove_Tick($script:ElapsedTickHandler)
+    $script:ElapsedTickHandler = $null
     if ($script:LaunchPS) {
         try { $script:LaunchPS.Stop()    } catch {}
         try { $script:LaunchPS.Dispose() } catch {}
@@ -1343,7 +1360,7 @@ $ShutdownBtn.Add_Click({
             $ct = [System.Windows.Threading.DispatcherTimer]::new()
             $ct.Interval = [TimeSpan]::FromSeconds(5)
             $t = $ct; $w = $Window
-            $ct.Add_Tick({ $t.Stop(); $w.Close() })
+            $ct.Add_Tick({ $t.Stop(); $w.Close() }.GetNewClosure())
             $ct.Start()
         }
     } catch {
@@ -1724,6 +1741,9 @@ $SettingsBtn.Add_Click({
     })
 
     $Dlg.ShowDialog() | Out-Null
+    $SaveBtn = $null; $CancelBtn = $null
+    $AddAppBtn = $null; $RemoveAppBtn = $null
+    $AppsGrid = $null; $Col = $null; $Dlg = $null
 })
 
 # ── Initial load & show ───────────────────────────────────
