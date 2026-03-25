@@ -148,6 +148,13 @@ function Load-Settings {
         $script:AllApps += @{ Name = $E.Name; Process = $E.Process; Enabled = [bool]$E.Enabled }
     }
 
+    # Sync live settings into shared state so the background runspace always
+    # reads current values at shutdown (not the stale snapshot from launch-click).
+    if ($SharedState) {
+        $SharedState['AutoClose'] = $script:AutoClose
+        $SharedState['SavePos']   = $script:SavePos
+    }
+
     # Apps: enabled-only subset used for launching
     $script:Apps = @()
     foreach ($E in $J.Apps) {
@@ -959,7 +966,7 @@ function Write-UILog { param($Message, [string]$Level = 'Info')
 }
 
 # ── Shared state (thread-safe) ────────────────────────────
-$SharedState = [hashtable]::Synchronized(@{ EliteStartTime = $null })
+$SharedState = [hashtable]::Synchronized(@{ EliteStartTime = $null; AutoClose = $true; SavePos = $true })
 
 # ── Elapsed timer (UI thread) ─────────────────────────────
 $ElapsedTimer = [System.Windows.Threading.DispatcherTimer]::new()
@@ -1179,7 +1186,7 @@ $LaunchScript = {
         UiStatus 'Elite' 'Offline' '#484850' -ClearTimer $true -ClearPid $true
         UiLog 'Elite: Dangerous offline.'
 
-        if ($script:SavePos) {
+        if ($SharedState['SavePos']) {
             try {
                 $Dispatcher.Invoke([Action]{ Save-WindowPositions })
             } catch {
@@ -1205,7 +1212,7 @@ $LaunchScript = {
             -Value "=== Session ended $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" `
             -EA SilentlyContinue
 
-        if ($AutoClose) {
+        if ($SharedState['AutoClose']) {
             UiLog 'Closing launcher in 5 seconds...' -Lvl Dim
             Start-Sleep -Seconds 5
             $w = $Window
@@ -1227,7 +1234,7 @@ $LaunchScript = {
                 $ElapsedTimer.Stop()
                 $LaunchBtn.IsEnabled = $true
                 $LaunchBtn.Content   = 'LAUNCH'
-            })
+            }.GetNewClosure())
         } catch {}
         $SharedState['EliteStartTime'] = $null
     }
