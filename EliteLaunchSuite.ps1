@@ -788,6 +788,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
 
             if ($Running) {
                 try { $Running | Stop-Process -Force -EA Stop } catch {}
+                try { $Running.Dispose() } catch {}
                 $row = $script:StatusRows[$k]
                 if ($row) {
                     $row.Dot.Fill           = Brush '#484850'
@@ -830,6 +831,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
                             $row.CtrlBtn.BorderBrush = Brush '#661122'
                         }
                     }
+                    try { $P.Dispose() } catch {}
                 } catch {
                     $row = $script:StatusRows[$k]
                     if ($row) {
@@ -936,6 +938,7 @@ function Save-WindowPositions {
                 $savedCount++
             }
         }
+        if ($proc) { try { $proc.Dispose() } catch {} }
     }
     $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8
     Load-Settings
@@ -1099,6 +1102,7 @@ $LaunchScript = {
     UiLog 'Steam online.' -Lvl Success
     $SteamProc = Get-Process -Name steam -EA SilentlyContinue | Select-Object -First 1
     if ($SteamProc) { UiPid 'Steam' $SteamProc.Id }
+    try { $SteamProc.Dispose() } catch {}
 
     # ── Launch Elite ───────────────────────────────────────
     UiStatus 'Elite' 'Waiting…' '#C8860A'
@@ -1346,6 +1350,7 @@ $ShutdownBtn.Add_Click({
                 $anyFound = $true
                 Write-UILog "Stopping $($App.Name)..." -Level Warning
                 $Running | Stop-Process -Force -EA SilentlyContinue
+                $Running | ForEach-Object { try { $_.Dispose() } catch {} }
                 $row = $script:StatusRows[$App.Name]
                 if ($row) {
                     $row.Dot.Fill           = Brush '#484850'
