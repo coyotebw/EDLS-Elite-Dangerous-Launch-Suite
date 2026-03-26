@@ -971,8 +971,7 @@ function Write-UILog { param($Message, [string]$Level = 'Info')
         $p = [System.Windows.Documents.Paragraph]::new()
         $p.Margin = [System.Windows.Thickness]::new(0)
         $r = [System.Windows.Documents.Run]::new($l)
-        $r.Foreground = [System.Windows.Media.SolidColorBrush]`
-            [System.Windows.Media.ColorConverter]::ConvertFromString($c)
+        $r.Foreground = Brush $c
         $p.Inlines.Add($r)
         if ($doc.Blocks.Count -gt 100) { $doc.Blocks.Remove($doc.Blocks.FirstBlock) }
         $doc.Blocks.Add($p)
