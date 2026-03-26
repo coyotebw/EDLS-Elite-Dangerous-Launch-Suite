@@ -178,10 +178,16 @@ function Load-Settings {
     }
 }
 
-# ── Brush helper ──────────────────────────────────────────
+# ── Brush helper (cached — all calls happen on the UI thread) ─────────────
+$script:BrushCache = @{}
 function Brush { param($Hex)
-    [System.Windows.Media.SolidColorBrush]`
-    [System.Windows.Media.ColorConverter]::ConvertFromString($Hex)
+    if (-not $script:BrushCache.ContainsKey($Hex)) {
+        $b = [System.Windows.Media.SolidColorBrush]`
+             [System.Windows.Media.ColorConverter]::ConvertFromString($Hex)
+        $b.Freeze()
+        $script:BrushCache[$Hex] = $b
+    }
+    $script:BrushCache[$Hex]
 }
 
 # ── SetupComplete flag persister ──────────────────────────
@@ -221,8 +227,13 @@ $SelfVersionScript = {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
     function RsBrush { param($H)
-        [System.Windows.Media.SolidColorBrush]`
-        [System.Windows.Media.ColorConverter]::ConvertFromString($H)
+        if (-not $BrushCache.ContainsKey($H)) {
+            $b = [System.Windows.Media.SolidColorBrush]`
+                 [System.Windows.Media.ColorConverter]::ConvertFromString($H)
+            $b.Freeze()
+            $BrushCache[$H] = $b
+        }
+        $BrushCache[$H]
     }
 
     function UiLog { param($M, [string]$Lvl = 'Info')
@@ -500,6 +511,7 @@ del "%~f0"
 
 # ── Load window ───────────────────────────────────────────
 $Window          = [System.Windows.Markup.XamlReader]::Load([System.Xml.XmlNodeReader]::new($Xaml))
+$Xaml            = $null
 $CmdrLabel       = $Window.FindName('CmdrLabel')
 $VersionLabel    = $Window.FindName('VersionLabel')
 $ReportIssueLink = $Window.FindName('ReportIssueLink')
@@ -1002,8 +1014,13 @@ $LaunchScript = {
     Add-Type -AssemblyName PresentationFramework, PresentationCore
 
     function RsBrush { param($H)
-        [System.Windows.Media.SolidColorBrush]`
-        [System.Windows.Media.ColorConverter]::ConvertFromString($H)
+        if (-not $BrushCache.ContainsKey($H)) {
+            $b = [System.Windows.Media.SolidColorBrush]`
+                 [System.Windows.Media.ColorConverter]::ConvertFromString($H)
+            $b.Freeze()
+            $BrushCache[$H] = $b
+        }
+        $BrushCache[$H]
     }
 
     function UiLog { param($M, [string]$Lvl = 'Info')
@@ -1271,7 +1288,8 @@ $LaunchBtn.Add_Click({
         @('ElapsedTimer',       $ElapsedTimer),
         @('SharedState',        $SharedState),
         @('AutoClose',          $script:AutoClose),
-        @('Window',             $Window)
+        @('Window',             $Window),
+        @('BrushCache',         $script:BrushCache)
     )) {
         $ISS.Variables.Add(
             [System.Management.Automation.Runspaces.SessionStateVariableEntry]::new(
@@ -1807,7 +1825,8 @@ $Window.Add_Loaded({
         @('LogDocument', $LogDocument),
         @('LogBox',      $LogBox),
         @('AppVersion',  $script:AppVersion),
-        @('RepoRoot',    $_appDir)
+        @('RepoRoot',    $_appDir),
+        @('BrushCache',  $script:BrushCache)
     )) {
         $ISS_ver.Variables.Add(
             [System.Management.Automation.Runspaces.SessionStateVariableEntry]::new(
@@ -1827,4 +1846,7 @@ if ($script:AutoStart) {
 } else {
     Write-UILog 'Click LAUNCH to begin.' -Level Dim
 }
+[System.GC]::Collect()
+[System.GC]::WaitForPendingFinalizers()
+[System.GC]::Collect()
 $Window.ShowDialog() | Out-Null
