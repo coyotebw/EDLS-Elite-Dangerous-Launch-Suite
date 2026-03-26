@@ -788,6 +788,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
 
             if ($Running) {
                 try { $Running | Stop-Process -Force -EA Stop } catch {}
+                try { $Running.Dispose() } catch {}
                 $row = $script:StatusRows[$k]
                 if ($row) {
                     $row.Dot.Fill           = Brush '#484850'
@@ -830,6 +831,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
                             $row.CtrlBtn.BorderBrush = Brush '#661122'
                         }
                     }
+                    try { $P.Dispose() } catch {}
                 } catch {
                     $row = $script:StatusRows[$k]
                     if ($row) {
@@ -936,6 +938,7 @@ function Save-WindowPositions {
                 $savedCount++
             }
         }
+        if ($proc) { try { $proc.Dispose() } catch {} }
     }
     $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8
     Load-Settings
@@ -1099,6 +1102,7 @@ $LaunchScript = {
     UiLog 'Steam online.' -Lvl Success
     $SteamProc = Get-Process -Name steam -EA SilentlyContinue | Select-Object -First 1
     if ($SteamProc) { UiPid 'Steam' $SteamProc.Id }
+    try { $SteamProc.Dispose() } catch {}
 
     # ── Launch Elite ───────────────────────────────────────
     UiStatus 'Elite' 'Waiting…' '#C8860A'
@@ -1132,6 +1136,7 @@ $LaunchScript = {
                 $Launched += @{ Name = $App.Name; Process = $App.Process; PID = $ExistingProc.Id }
                 UiStatus $App.Name 'Online' '#44CC44'
                 UiPid $App.Name $ExistingProc.Id
+                try { $ExistingProc.Dispose() } catch {}
                 continue
             }
             try {
@@ -1158,6 +1163,7 @@ $LaunchScript = {
                         UiLog "$($App.Name) window positioned at ($($App.WindowX),$($App.WindowY))." -Lvl Dim
                     }
                 }
+                try { $P.Dispose() } catch {}
             } catch {
                 UiLog "Failed to launch $($App.Name): $_" -Lvl Warning
                 UiStatus $App.Name 'Failed' '#CC4444'
@@ -1179,8 +1185,10 @@ $LaunchScript = {
                     UiStatus $LA.Name 'Offline' '#484850' -ClearPid $true
                     $NotedOffline[$LA.Name] = $true
                 }
+                if ($Still) { try { $Still.Dispose() } catch {} }
             }
         }
+        if ($EP) { try { $EP.Dispose() } catch {}; $EP = $null }
 
         # ── Shutdown ───────────────────────────────────────────
         UiStatus 'Elite' 'Offline' '#484850' -ClearTimer $true -ClearPid $true
@@ -1204,6 +1212,7 @@ $LaunchScript = {
                 UiLog "Stopping $($LA.Name)..."
                 $Running | Stop-Process -Force -EA SilentlyContinue
                 UiStatus $LA.Name 'Closed' '#484850' -ClearPid $true
+                try { $Running.Dispose() } catch {}
             }
         }
 
@@ -1341,6 +1350,7 @@ $ShutdownBtn.Add_Click({
                 $anyFound = $true
                 Write-UILog "Stopping $($App.Name)..." -Level Warning
                 $Running | Stop-Process -Force -EA SilentlyContinue
+                $Running | ForEach-Object { try { $_.Dispose() } catch {} }
                 $row = $script:StatusRows[$App.Name]
                 if ($row) {
                     $row.Dot.Fill           = Brush '#484850'
@@ -1398,11 +1408,12 @@ function Show-FirstTimeSetup {
       </Grid.RowDefinitions>
 
       <!-- Heading -->
+      <TextBlock Grid.Row="0" Text="Welcome to Elite: Dangerous Launch Suite"
                  Foreground="#FFB700" FontSize="15" FontWeight="Bold"
                  Margin="0,0,0,10"/>
 
       <!-- Description -->
-      <TextBlock Grid.Row="1"
+      <TextBlock Grid.Row="1" Text="Select which companion apps to enable on launch."
                  Foreground="#C8860A" FontSize="11" TextWrapping="Wrap"
                  Margin="0,0,0,18"/>
 
@@ -1414,32 +1425,23 @@ function Show-FirstTimeSetup {
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
           <CheckBox Name="ChkSrvSurvey" Content="SrvSurvey"                       IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkOdyssey"   Content="Odyssey Materials Helper"        IsChecked="True"
-          <CheckBox Name="ChkOdyssey"   Content="Odyssey Materials Helper"        IsChecked="False"
+          <CheckBox Name="ChkOdyssey"     Content="Odyssey Materials Helper"   IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkEDCoPilot" Content="ED CoPilot"                      IsChecked="True"
-          <CheckBox Name="ChkEDCoPilot" Content="ED CoPilot"                      IsChecked="False"
+          <CheckBox Name="ChkEDCoPilot"  Content="ED CoPilot"                 IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkEDHM"      Content="EDHM UI"                         IsChecked="True"
-          <CheckBox Name="ChkEDHM"      Content="EDHM UI"                         IsChecked="False"
+          <CheckBox Name="ChkEDHM"       Content="EDHM UI"                    IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkOpentrack"   Content="opentrack"                     IsChecked="True"
-          <CheckBox Name="ChkOpentrack"   Content="opentrack"                     IsChecked="False"
+          <CheckBox Name="ChkOpentrack"  Content="opentrack"                  IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkIcarus"      Content="ICARUS Terminal"               IsChecked="True"
-          <CheckBox Name="ChkIcarus"      Content="ICARUS Terminal"               IsChecked="False"
+          <CheckBox Name="ChkIcarus"     Content="ICARUS Terminal"            IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkEDDiscovery" Content="EDDiscovery"                   IsChecked="True"
-          <CheckBox Name="ChkEDDiscovery" Content="EDDiscovery"                   IsChecked="False"
+          <CheckBox Name="ChkEDDiscovery" Content="EDDiscovery"               IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkVoiceAttack" Content="VoiceAttack"                   IsChecked="True"
-          <CheckBox Name="ChkVoiceAttack" Content="VoiceAttack"                   IsChecked="False"
+          <CheckBox Name="ChkVoiceAttack" Content="VoiceAttack"               IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkEDCoPTER"    Content="EDCoPTER"                      IsChecked="True"
-          <CheckBox Name="ChkEDCoPTER"    Content="EDCoPTER"                      IsChecked="False"
+          <CheckBox Name="ChkEDCoPTER"   Content="EDCoPTER"                   IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
-          <CheckBox Name="ChkObservatory" Content="Elite Observatory"             IsChecked="True"
-          <CheckBox Name="ChkObservatory" Content="Elite Observatory"             IsChecked="False"
+          <CheckBox Name="ChkObservatory" Content="Elite Observatory"         IsChecked="True"
                     Foreground="#C8860A" FontSize="11" Margin="0,4"/>
         </StackPanel>
       </Border>
@@ -1453,6 +1455,8 @@ function Show-FirstTimeSetup {
                 BorderBrush="#2A2A35" BorderThickness="1"
                 FontFamily="Consolas" FontSize="12"
                 Cursor="Hand"/>
+        <Button Name="CompleteBtn" Content="COMPLETE"
+                Height="34" Width="120" Margin="0,0,0,0"
                 Background="#140F00" Foreground="#FFB700"
                 BorderBrush="#C8860A" BorderThickness="1"
                 FontFamily="Consolas" FontSize="12"
