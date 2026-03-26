@@ -119,13 +119,22 @@ function Load-Settings {
     try   { $J = Get-Content $script:SettingsFile -Raw -EA Stop | ConvertFrom-Json -EA Stop }
     catch { $J = $Defaults | ConvertTo-Json -Depth 5 | ConvertFrom-Json }
 
+    $script:DefaultAppNames = @($DefaultApps | ForEach-Object { $_.Name })
+
+    # Load the list of default apps the user has explicitly removed so they are
+    # not re-added by the merge below.
+    $script:RemovedDefaults = @()
+    if ($J.RemovedDefaults) { $script:RemovedDefaults = @($J.RemovedDefaults) }
+
     # Merge any default apps missing from the existing settings file so that
     # new entries added in a later version automatically appear for existing installs.
+    # Skip any defaults the user intentionally removed (tracked in RemovedDefaults).
     $existingNames = @($J.Apps | ForEach-Object { $_.Name })
-    $missing = $DefaultApps | Where-Object { $_.Name -notin $existingNames }
+    $missing = $DefaultApps | Where-Object { $_.Name -notin $existingNames -and $_.Name -notin $script:RemovedDefaults }
     if ($missing) {
         $allApps = @($J.Apps) + @($missing)
         $J | Add-Member -NotePropertyName Apps -NotePropertyValue $allApps -Force
+        $J | Add-Member -NotePropertyName RemovedDefaults -NotePropertyValue $script:RemovedDefaults -Force
         try { $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8 } catch {}
     }
 
@@ -1715,6 +1724,10 @@ $SettingsBtn.Add_Click({
                     WindowHeight = if ($p) { [int]$p.WindowHeight } else { $null }
                 }
             })
+            # Track which default apps the user removed so Load-Settings won't re-add them.
+            $keptNames = @($NewApps | ForEach-Object { $_['Name'] })
+            $newlyRemoved = @($script:DefaultAppNames | Where-Object { $_ -notin $keptNames })
+            $mergedRemoved = @(($script:RemovedDefaults + $newlyRemoved) | Select-Object -Unique)
             [ordered]@{
                 CmdrName          = $CmdrBox.Text
                 EliteAppId        = $script:EliteAppId
@@ -1728,6 +1741,7 @@ $SettingsBtn.Add_Click({
                 LauncherWidth     = $script:LauncherWidth
                 LauncherHeight    = $script:LauncherHeight
                 Apps              = $NewApps
+                RemovedDefaults   = $mergedRemoved
             } | ConvertTo-Json -Depth 5 |
                 Set-Content $script:SettingsFile -Encoding UTF8
             Load-Settings
