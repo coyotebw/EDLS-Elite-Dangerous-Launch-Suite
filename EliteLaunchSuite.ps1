@@ -107,8 +107,6 @@ function Load-Settings {
         SetupComplete      = $false
         AutoStart          = $false
         ShowInactiveCards  = $true
-        AutoClose          = $true
-        SavePos            = $true
         Apps               = $DefaultApps
     }
 
@@ -143,25 +141,12 @@ function Load-Settings {
     $script:SetupComplete     = if ($null -ne $J.SetupComplete)     { [bool]$J.SetupComplete }    else { $Defaults.SetupComplete }
     $script:AutoStart         = if ($null -ne $J.AutoStart)         { [bool]$J.AutoStart }        else { $Defaults.AutoStart }
     $script:ShowInactiveCards = if ($null -ne $J.ShowInactiveCards) { [bool]$J.ShowInactiveCards } else { $Defaults.ShowInactiveCards }
-    $script:AutoClose         = if ($null -ne $J.AutoClose)         { [bool]$J.AutoClose }        else { $Defaults.AutoClose }
-    $script:SavePos           = if ($null -ne $J.SavePos)           { [bool]$J.SavePos }          else { $Defaults.SavePos }
-    $script:LauncherX         = if ($null -ne $J.LauncherX)         { [int]$J.LauncherX }         else { $null }
-    $script:LauncherY         = if ($null -ne $J.LauncherY)         { [int]$J.LauncherY }         else { $null }
-    $script:LauncherWidth     = if ($null -ne $J.LauncherWidth)     { [int]$J.LauncherWidth }     else { $null }
-    $script:LauncherHeight    = if ($null -ne $J.LauncherHeight)    { [int]$J.LauncherHeight }    else { $null }
 
     # AllApps: every entry with a Name + Process (used for status card display regardless of Enabled)
     $script:AllApps = @()
     foreach ($E in $J.Apps) {
         if (-not $E.Name -or -not $E.Process) { continue }
         $script:AllApps += @{ Name = $E.Name; Process = $E.Process; Enabled = [bool]$E.Enabled }
-    }
-
-    # Sync live settings into shared state so the background runspace always
-    # reads current values at shutdown (not the stale snapshot from launch-click).
-    if ($SharedState) {
-        $SharedState['AutoClose'] = $script:AutoClose
-        $SharedState['SavePos']   = $script:SavePos
     }
 
     # Apps: enabled-only subset used for launching
@@ -176,13 +161,9 @@ function Load-Settings {
                 Select-Object -First 1 -ExpandProperty FullName }
         } else { $null }
         $script:Apps += @{
-            Name         = $E.Name
-            Process      = $E.Process
-            Path         = $P
-            WindowX      = if ($null -ne $E.WindowX)      { [int]$E.WindowX }      else { $null }
-            WindowY      = if ($null -ne $E.WindowY)      { [int]$E.WindowY }      else { $null }
-            WindowWidth  = if ($null -ne $E.WindowWidth)  { [int]$E.WindowWidth }  else { $null }
-            WindowHeight = if ($null -ne $E.WindowHeight) { [int]$E.WindowHeight } else { $null }
+            Name    = $E.Name
+            Process = $E.Process
+            Path    = $P
         }
     }
 }
@@ -545,14 +526,6 @@ public static class Win32Sizing {
     public const int WMSZ_TOP     = 3;
     public const int WMSZ_TOPLEFT = 4;
     public const int WMSZ_TOPRIGHT= 5;
-
-    [DllImport("user32.dll")]
-    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-    [DllImport("user32.dll")]
-    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
-        int X, int Y, int cx, int cy, uint uFlags);
-    public const uint SWP_NOZORDER   = 0x0004;
-    public const uint SWP_NOACTIVATE = 0x0010;
 
     public static void Enforce(IntPtr lParam, int edge, double ratio) {
         RECT r = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
@@ -943,36 +916,6 @@ function Rebuild-StatusRows {
     }
 }
 
-# ── Window position persistence ───────────────────────────
-function Save-WindowPositions {
-    $J = Get-Content $script:SettingsFile -Raw | ConvertFrom-Json
-    $savedCount = 0
-
-    # Save EDLS own window position
-    $J | Add-Member -NotePropertyName LauncherX      -NotePropertyValue ([int]$Window.Left)   -Force
-    $J | Add-Member -NotePropertyName LauncherY      -NotePropertyValue ([int]$Window.Top)    -Force
-    $J | Add-Member -NotePropertyName LauncherWidth  -NotePropertyValue ([int]$Window.Width)  -Force
-    $J | Add-Member -NotePropertyName LauncherHeight -NotePropertyValue ([int]$Window.Height) -Force
-
-    # Save companion app window positions
-    foreach ($Entry in $J.Apps) {
-        $proc = Get-Process -Name $Entry.Process -EA SilentlyContinue | Select-Object -First 1
-        if ($proc -and $proc.MainWindowHandle -ne [IntPtr]::Zero) {
-            $rect = New-Object Win32Sizing+RECT
-            if ([Win32Sizing]::GetWindowRect($proc.MainWindowHandle, [ref]$rect)) {
-                $Entry | Add-Member -NotePropertyName WindowX      -NotePropertyValue $rect.Left                  -Force
-                $Entry | Add-Member -NotePropertyName WindowY      -NotePropertyValue $rect.Top                   -Force
-                $Entry | Add-Member -NotePropertyName WindowWidth  -NotePropertyValue ($rect.Right  - $rect.Left) -Force
-                $Entry | Add-Member -NotePropertyName WindowHeight -NotePropertyValue ($rect.Bottom - $rect.Top)  -Force
-                $savedCount++
-            }
-        }
-        if ($proc) { try { $proc.Dispose() } catch {} }
-    }
-    $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8
-    Load-Settings
-    Write-UILog "Window positions saved (EDLS + $savedCount app(s))." -Level Success
-}
 
 # ── UI log writer (main thread) ───────────────────────────
 function Write-UILog { param($Message, [string]$Level = 'Info')
@@ -997,7 +940,7 @@ function Write-UILog { param($Message, [string]$Level = 'Info')
 }
 
 # ── Shared state (thread-safe) ────────────────────────────
-$SharedState = [hashtable]::Synchronized(@{ EliteStartTime = $null; AutoClose = $true; SavePos = $true })
+$SharedState = [hashtable]::Synchronized(@{ EliteStartTime = $null })
 
 # ── Elapsed timer (UI thread) ─────────────────────────────
 $ElapsedTimer = [System.Windows.Threading.DispatcherTimer]::new()
@@ -1180,22 +1123,6 @@ $LaunchScript = {
                 UiStatus $App.Name 'Online' '#44CC44'
                 UiPid $App.Name $P.Id
                 UiLog "$($App.Name) online. (PID: $($P.Id))" -Lvl Success
-                if ($null -ne $App.WindowX) {
-                    $deadline = (Get-Date).AddSeconds(10)
-                    do {
-                        Start-Sleep -Milliseconds 300
-                        try { $P.Refresh() } catch {}
-                    } while ($P.MainWindowHandle -eq [IntPtr]::Zero -and (Get-Date) -lt $deadline)
-                    if ($P.MainWindowHandle -ne [IntPtr]::Zero) {
-                        [Win32Sizing]::SetWindowPos(
-                            $P.MainWindowHandle, [IntPtr]::Zero,
-                            $App.WindowX, $App.WindowY,
-                            $App.WindowWidth, $App.WindowHeight,
-                            ([Win32Sizing]::SWP_NOZORDER -bor [Win32Sizing]::SWP_NOACTIVATE)
-                        ) | Out-Null
-                        UiLog "$($App.Name) window positioned at ($($App.WindowX),$($App.WindowY))." -Lvl Dim
-                    }
-                }
                 try { $P.Dispose() } catch {}
             } catch {
                 UiLog "Failed to launch $($App.Name): $_" -Lvl Warning
@@ -1227,14 +1154,6 @@ $LaunchScript = {
         UiStatus 'Elite' 'Offline' '#484850' -ClearTimer $true -ClearPid $true
         UiLog 'Elite: Dangerous offline.'
 
-        if ($SharedState['SavePos']) {
-            try {
-                $Dispatcher.Invoke([Action]{ Save-WindowPositions })
-            } catch {
-                UiLog "Could not save window positions: $_" -Lvl Warning
-            }
-        }
-
         UiLog 'Closing third-party tools...'
 
         foreach ($LA in $Launched) {
@@ -1254,12 +1173,6 @@ $LaunchScript = {
             -Value "=== Session ended $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" `
             -EA SilentlyContinue
 
-        if ($SharedState['AutoClose']) {
-            UiLog 'Closing launcher in 5 seconds...' -Lvl Dim
-            Start-Sleep -Seconds 5
-            $w = $Window
-            $Dispatcher.BeginInvoke([Action]{ $w.Close() }.GetNewClosure())
-        }
 
     } catch {
         $ErrMsg = $_.ToString()
@@ -1303,7 +1216,6 @@ $LaunchBtn.Add_Click({
         @('LaunchBtn',          $LaunchBtn),
         @('ElapsedTimer',       $ElapsedTimer),
         @('SharedState',        $SharedState),
-        @('AutoClose',          $script:AutoClose),
         @('Window',             $Window),
         @('BrushCache',         $script:BrushCache)
     )) {
@@ -1406,14 +1318,6 @@ $ShutdownBtn.Add_Click({
             Write-UILog 'No tools running.' -Level Dim
         }
 
-        if ($script:AutoClose) {
-            Write-UILog 'Closing launcher in 5 seconds...' -Level Dim
-            $ct = [System.Windows.Threading.DispatcherTimer]::new()
-            $ct.Interval = [TimeSpan]::FromSeconds(5)
-            $t = $ct; $w = $Window
-            $ct.Add_Tick({ $t.Stop(); $w.Close() }.GetNewClosure())
-            $ct.Start()
-        }
     } catch {
         Write-UILog "Shutdown error: $_" -Level Error
     }
@@ -1603,8 +1507,6 @@ $SettingsBtn.Add_Click({
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="CMDR NAME"
@@ -1616,14 +1518,6 @@ $SettingsBtn.Add_Click({
         <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Name="ChkShowInactive"
                   Content="Show status cards for inactive programs"
                   Foreground="#C8860A" FontSize="11" Margin="0,8,0,2"/>
-
-        <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Name="ChkAutoClose"
-                  Content="Close launcher automatically after shutdown sequence (5s delay)"
-                  Foreground="#C8860A" FontSize="11" Margin="0,2,0,2"/>
-
-        <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Name="ChkSavePos"
-                  Content="Save companion app window positions on Elite exit"
-                  Foreground="#C8860A" FontSize="11" Margin="0,2,0,2"/>
 
       </Grid>
 
@@ -1681,8 +1575,6 @@ $SettingsBtn.Add_Click({
 
     $CmdrBox         = $Dlg.FindName('CmdrBox')
     $ChkShowInactive = $Dlg.FindName('ChkShowInactive')
-    $ChkAutoClose    = $Dlg.FindName('ChkAutoClose')
-    $ChkSavePos      = $Dlg.FindName('ChkSavePos')
     $AppsGrid        = $Dlg.FindName('AppsGrid')
     $AddAppBtn    = $Dlg.FindName('AddAppBtn')
     $RemoveAppBtn = $Dlg.FindName('RemoveAppBtn')
@@ -1691,8 +1583,6 @@ $SettingsBtn.Add_Click({
 
     $CmdrBox.Text                = $script:CmdrName
     $ChkShowInactive.IsChecked   = $script:ShowInactiveCards
-    $ChkAutoClose.IsChecked      = $script:AutoClose
-    $ChkSavePos.IsChecked        = $script:SavePos
 
     try {
         $RawJson  = Get-Content $script:SettingsFile -Raw -EA Stop |
@@ -1730,23 +1620,12 @@ $SettingsBtn.Add_Click({
 
     $SaveBtn.Add_Click({
         try {
-            $posMap = @{}
-            foreach ($rawApp in $RawJson.Apps) {
-                if ($rawApp.Name -and $null -ne $rawApp.WindowX) {
-                    $posMap[$rawApp.Name] = $rawApp
-                }
-            }
             $NewApps = @($AppsGrid.ItemsSource | ForEach-Object {
-                $p = $posMap[$_.Name]
                 [ordered]@{
-                    Name         = "$($_.Name)"
-                    Process      = "$($_.Process)"
-                    Path         = if ($_.Path) { "$($_.Path)" } else { $null }
-                    Enabled      = [bool]$_.Enabled
-                    WindowX      = if ($p) { [int]$p.WindowX }      else { $null }
-                    WindowY      = if ($p) { [int]$p.WindowY }      else { $null }
-                    WindowWidth  = if ($p) { [int]$p.WindowWidth }  else { $null }
-                    WindowHeight = if ($p) { [int]$p.WindowHeight } else { $null }
+                    Name    = "$($_.Name)"
+                    Process = "$($_.Process)"
+                    Path    = if ($_.Path) { "$($_.Path)" } else { $null }
+                    Enabled = [bool]$_.Enabled
                 }
             })
             # Track which default apps the user removed so Load-Settings won't re-add them.
@@ -1759,12 +1638,6 @@ $SettingsBtn.Add_Click({
                 SetupComplete     = $script:SetupComplete
                 AutoStart         = $script:AutoStart
                 ShowInactiveCards = [bool]$ChkShowInactive.IsChecked
-                AutoClose         = [bool]$ChkAutoClose.IsChecked
-                SavePos           = [bool]$ChkSavePos.IsChecked
-                LauncherX         = $script:LauncherX
-                LauncherY         = $script:LauncherY
-                LauncherWidth     = $script:LauncherWidth
-                LauncherHeight    = $script:LauncherHeight
                 Apps              = $NewApps
                 RemovedDefaults   = $mergedRemoved
             } | ConvertTo-Json -Depth 5 |
@@ -1811,14 +1684,6 @@ if ($script:AutoStart) {
 
 # Auto-trigger launch once window is fully rendered
 $Window.Add_Loaded({
-    # Restore saved EDLS window position
-    if ($null -ne $script:LauncherX) {
-        $Window.Left   = $script:LauncherX
-        $Window.Top    = $script:LauncherY
-        $Window.Width  = $script:LauncherWidth
-        $Window.Height = $script:LauncherHeight
-    }
-
     # Show first-time setup dialog for new installs
     if (-not $script:SetupComplete) {
         Show-FirstTimeSetup
