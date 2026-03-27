@@ -739,7 +739,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
         $InnerGrid.ColumnDefinitions.Add($cd0)
         $InnerGrid.ColumnDefinitions.Add($cd1)
     } elseif ($Key -ne 'Steam' -and -not $IsInactive) {
-        # Col 0 (*): label + status text + PID  |  Col 1 (Auto): START/STOP control button
+        # Col 0 (*): label + status text  |  Col 1 (Auto): PID (top) + START/STOP button (middle)
         $cd0 = [System.Windows.Controls.ColumnDefinition]::new()
         $cd0.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
         $cd1 = [System.Windows.Controls.ColumnDefinition]::new()
@@ -910,10 +910,18 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
         [System.Windows.Controls.Grid]::SetColumn($PidTB, 1)
         $InnerGrid.Children.Add($PidTB) | Out-Null
     } else {
-        # PID: Row 1 — bottom-aligned with status text, right side
-        $PidTB.HorizontalAlignment = 'Right'
-        $PidTB.VerticalAlignment   = 'Bottom'
-        [System.Windows.Controls.Grid]::SetRow($PidTB, 1)
+        if ($Key -ne 'Steam' -and -not $IsInactive) {
+            # PID: Row 0, Col 1 — top-right, inline with app name label, above the button
+            $PidTB.HorizontalAlignment = 'Right'
+            $PidTB.VerticalAlignment   = 'Center'
+            [System.Windows.Controls.Grid]::SetRow($PidTB, 0)
+            [System.Windows.Controls.Grid]::SetColumn($PidTB, 1)
+        } else {
+            # PID: Row 1 — bottom-right for Steam/inactive (no Col 1)
+            $PidTB.HorizontalAlignment = 'Right'
+            $PidTB.VerticalAlignment   = 'Bottom'
+            [System.Windows.Controls.Grid]::SetRow($PidTB, 1)
+        }
         $InnerGrid.Children.Add($PidTB) | Out-Null
         # TimerTB kept in row map for UiStatus ClearTimer compat but not shown
     }
