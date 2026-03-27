@@ -560,9 +560,10 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
     $Card.Margin          = [System.Windows.Thickness]::new(0,0,4,4)
     $Card.Padding         = [System.Windows.Thickness]::new(14,10,14,10)
 
-    # Inner grid — 3 rows for all cards; Elite adds a right column for timer+PID
+    # Inner grid; Elite has 2 rows + right column for PID, non-Elite has 3 rows
     $InnerGrid = [System.Windows.Controls.Grid]::new()
-    foreach ($h in @('Auto', 'Star', 'Auto')) {
+    $rowHeights = if ($isElite) { @('Auto', 'Star') } else { @('Auto', 'Star', 'Auto') }
+    foreach ($h in $rowHeights) {
         $rd = [System.Windows.Controls.RowDefinition]::new()
         $rd.Height = if ($h -eq 'Star') {
             [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
@@ -570,7 +571,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
         $InnerGrid.RowDefinitions.Add($rd)
     }
     if ($isElite) {
-        # Col 0 (*): label + status text  |  Col 1 (Auto): timer (top) + PID (bottom)
+        # Col 0 (*): label + status text  |  Col 1 (Auto): PID
         $cd0 = [System.Windows.Controls.ColumnDefinition]::new()
         $cd0.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
         $cd1 = [System.Windows.Controls.ColumnDefinition]::new()
@@ -719,7 +720,6 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
     $StateTB.Margin            = [System.Windows.Thickness]::new(0,4,0,2)
     [System.Windows.Controls.Grid]::SetRow($StateTB, 1)
     [System.Windows.Controls.Grid]::SetColumn($StateTB, 0)
-    if ($isElite) { [System.Windows.Controls.Grid]::SetRowSpan($StateTB, 2) }
     $InnerGrid.Children.Add($StateTB) | Out-Null
 
     # PID TextBlock
