@@ -107,8 +107,6 @@ function Load-Settings {
         SetupComplete      = $false
         AutoStart          = $false
         ShowInactiveCards  = $true
-        AutoClose          = $true
-        SavePos            = $true
         Apps               = $DefaultApps
     }
 
@@ -143,25 +141,12 @@ function Load-Settings {
     $script:SetupComplete     = if ($null -ne $J.SetupComplete)     { [bool]$J.SetupComplete }    else { $Defaults.SetupComplete }
     $script:AutoStart         = if ($null -ne $J.AutoStart)         { [bool]$J.AutoStart }        else { $Defaults.AutoStart }
     $script:ShowInactiveCards = if ($null -ne $J.ShowInactiveCards) { [bool]$J.ShowInactiveCards } else { $Defaults.ShowInactiveCards }
-    $script:AutoClose         = if ($null -ne $J.AutoClose)         { [bool]$J.AutoClose }        else { $Defaults.AutoClose }
-    $script:SavePos           = if ($null -ne $J.SavePos)           { [bool]$J.SavePos }          else { $Defaults.SavePos }
-    $script:LauncherX         = if ($null -ne $J.LauncherX)         { [int]$J.LauncherX }         else { $null }
-    $script:LauncherY         = if ($null -ne $J.LauncherY)         { [int]$J.LauncherY }         else { $null }
-    $script:LauncherWidth     = if ($null -ne $J.LauncherWidth)     { [int]$J.LauncherWidth }     else { $null }
-    $script:LauncherHeight    = if ($null -ne $J.LauncherHeight)    { [int]$J.LauncherHeight }    else { $null }
 
     # AllApps: every entry with a Name + Process (used for status card display regardless of Enabled)
     $script:AllApps = @()
     foreach ($E in $J.Apps) {
         if (-not $E.Name -or -not $E.Process) { continue }
         $script:AllApps += @{ Name = $E.Name; Process = $E.Process; Enabled = [bool]$E.Enabled }
-    }
-
-    # Sync live settings into shared state so the background runspace always
-    # reads current values at shutdown (not the stale snapshot from launch-click).
-    if ($SharedState) {
-        $SharedState['AutoClose'] = $script:AutoClose
-        $SharedState['SavePos']   = $script:SavePos
     }
 
     # Apps: enabled-only subset used for launching
@@ -176,13 +161,9 @@ function Load-Settings {
                 Select-Object -First 1 -ExpandProperty FullName }
         } else { $null }
         $script:Apps += @{
-            Name         = $E.Name
-            Process      = $E.Process
-            Path         = $P
-            WindowX      = if ($null -ne $E.WindowX)      { [int]$E.WindowX }      else { $null }
-            WindowY      = if ($null -ne $E.WindowY)      { [int]$E.WindowY }      else { $null }
-            WindowWidth  = if ($null -ne $E.WindowWidth)  { [int]$E.WindowWidth }  else { $null }
-            WindowHeight = if ($null -ne $E.WindowHeight) { [int]$E.WindowHeight } else { $null }
+            Name    = $E.Name
+            Process = $E.Process
+            Path    = $P
         }
     }
 }
@@ -199,23 +180,12 @@ function Brush { param($Hex)
     $script:BrushCache[$Hex]
 }
 
-# ── SetupComplete flag persister ──────────────────────────
-function Save-SetupComplete {
+# ── Single-field settings patcher ─────────────────────────
+function Set-SettingField { param([string]$Name, $Value)
     try {
         $J = Get-Content $script:SettingsFile -Raw -EA Stop |
              ConvertFrom-Json -EA Stop
-        $J | Add-Member -NotePropertyName SetupComplete -NotePropertyValue $true -Force
-        $J | ConvertTo-Json -Depth 5 |
-             Set-Content $script:SettingsFile -Encoding UTF8
-    } catch {}
-}
-
-# ── AutoStart setting persister ───────────────────────────
-function Save-AutoStart { param([bool]$Value)
-    try {
-        $J = Get-Content $script:SettingsFile -Raw -EA Stop |
-             ConvertFrom-Json -EA Stop
-        $J | Add-Member -NotePropertyName AutoStart -NotePropertyValue $Value -Force
+        $J | Add-Member -NotePropertyName $Name -NotePropertyValue $Value -Force
         $J | ConvertTo-Json -Depth 5 |
              Set-Content $script:SettingsFile -Encoding UTF8
     } catch {}
@@ -228,129 +198,6 @@ function Format-CmdrLine { param([string]$Name)
     "[CMDR] $Spaced"
 }
 
-
-# ── Self-version check scriptblock ────────────────────────
-# Injected vars: $Dispatcher, $LogFile, $LogDocument, $LogBox, $AppVersion, $RepoRoot
-$SelfVersionScript = {
-    Add-Type -AssemblyName PresentationFramework, PresentationCore
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-    function RsBrush { param($H)
-        if (-not $BrushCache.ContainsKey($H)) {
-            $b = [System.Windows.Media.SolidColorBrush]`
-                 [System.Windows.Media.ColorConverter]::ConvertFromString($H)
-            $b.Freeze()
-            $BrushCache[$H] = $b
-        }
-        $BrushCache[$H]
-    }
-
-    function UiLog { param($M, [string]$Lvl = 'Info')
-        $C = switch ($Lvl) {
-            'Success' { '#FFB700' } 'Error'   { '#CC4444' }
-            'Warning' { '#C8860A' } 'Dim'     { '#555555' }
-            default   { '#C8860A' }
-        }
-        $L = "[$(Get-Date -Format 'HH:mm:ss')] $M"
-        Add-Content -Path $LogFile -Value $L -EA SilentlyContinue
-        $d = $LogDocument; $b = $LogBox; $c = $C; $l = $L
-        $Dispatcher.Invoke([Action]{
-            $p = [System.Windows.Documents.Paragraph]::new()
-            $p.Margin = [System.Windows.Thickness]::new(0)
-            $r = [System.Windows.Documents.Run]::new($l)
-            $r.Foreground = RsBrush $c
-            $p.Inlines.Add($r)
-            if ($d.Blocks.Count -gt 100) { $d.Blocks.Remove($d.Blocks.FirstBlock) }
-            $d.Blocks.Add($p)
-            $b.ScrollToEnd()
-        })
-    }
-
-    try {
-        $H = @{ 'User-Agent' = "EDLaunchSuite/$AppVersion" }
-        $Release = Invoke-RestMethod `
-            -Uri 'https://api.github.com/repos/coyotebw/EDLS-Elite-Dangerous-Launch-Suite/releases/latest' `
-            -Headers $H -EA Stop
-        $LatestTag = $Release.tag_name -replace '^[vV]', ''
-        $Current   = [Version]$AppVersion
-        $Latest    = try { [Version]$LatestTag } catch { $null }
-        if ($Latest -and $Latest -gt $Current) {
-            UiLog "Update available: EDLaunchSuite v$LatestTag  (running v$AppVersion) — updating..." -Lvl Warning
-
-            $TempDir = Join-Path $env:TEMP "EDLS-update-$(Get-Date -Format 'yyyyMMddHHmmss')"
-            $ZipPath = Join-Path $TempDir 'repo.zip'
-            New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
-            try {
-                # Download the repo source from the main branch
-                UiLog 'Downloading update from repository...' -Lvl Dim
-                $ZipUrl = 'https://github.com/coyotebw/EDLS-Elite-Dangerous-Launch-Suite/archive/refs/heads/main.zip'
-                Invoke-WebRequest -Uri $ZipUrl -OutFile $ZipPath -Headers $H -UseBasicParsing -EA Stop
-
-                UiLog 'Extracting...' -Lvl Dim
-                Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
-                $ExtractedDir = Get-ChildItem $TempDir -Directory | Select-Object -First 1
-                if (-not $ExtractedDir) { throw 'Could not find extracted repo directory.' }
-
-                # Relative paths present in the new version
-                $NewRel = Get-ChildItem $ExtractedDir.FullName -Recurse -File |
-                    ForEach-Object { $_.FullName.Substring($ExtractedDir.FullName.Length + 1) }
-
-                # Relative paths currently on disk (exclude .git, *.exe, build.log)
-                $OldRel = Get-ChildItem $RepoRoot -Recurse -File |
-                    Where-Object {
-                        $_.FullName -notmatch '[\\/]\.git[\\/]' -and
-                        $_.Extension -ne '.exe' -and
-                        $_.Name -ne 'build.log'
-                    } |
-                    ForEach-Object { $_.FullName.Substring($RepoRoot.Length + 1) }
-
-                # Remove files that no longer exist upstream
-                foreach ($Rel in $OldRel) {
-                    if ($NewRel -notcontains $Rel) {
-                        Remove-Item (Join-Path $RepoRoot $Rel) -Force -EA SilentlyContinue
-                        UiLog "Removed: $Rel" -Lvl Dim
-                    }
-                }
-
-                # Copy all new/updated files (adds new, overwrites changed)
-                Copy-Item "$($ExtractedDir.FullName)\*" -Destination $RepoRoot -Recurse -Force
-
-                # Write a helper batch that rebuilds and relaunches once the user closes EDLS.
-                # We cannot rebuild while the exe is running — Windows locks it.
-                $BatchPath = Join-Path $RepoRoot '_edls_update.bat'
-                $ExePath   = Join-Path $RepoRoot 'EliteLaunchSuite.exe'
-                $BuildPs1  = Join-Path $RepoRoot 'Build.ps1'
-                @"
-@echo off
-echo Waiting for EDLS to close...
-:wait
-tasklist /fi "imagename eq EliteLaunchSuite.exe" 2>nul | find /i "EliteLaunchSuite.exe" >nul
-if not errorlevel 1 ( timeout /t 2 /nobreak >nul & goto wait )
-echo Rebuilding...
-powershell.exe -ExecutionPolicy Bypass -NonInteractive -NoProfile -File "$BuildPs1"
-echo Launching...
-start "" "$ExePath"
-del "%~f0"
-"@ | Set-Content -Path $BatchPath -Encoding ASCII
-
-                UiLog "Source updated to v$LatestTag — close EDLS and run _edls_update.bat to rebuild and relaunch." -Lvl Success
-            } finally {
-                Remove-Item $TempDir -Recurse -Force -EA SilentlyContinue
-            }
-        } else {
-            UiLog "EDLaunchSuite v$AppVersion — up to date." -Lvl Dim
-        }
-    } catch {
-        $ErrMsg = $_.ToString()
-        if ($ErrMsg -match '404|Not Found') {
-            UiLog 'Version check: no releases published yet.' -Lvl Dim
-        } elseif ($_ -is [System.Net.WebException] -or $ErrMsg -match 'connect|network|timeout|resolve|unable to') {
-            UiLog 'Version check skipped (network unavailable).' -Lvl Dim
-        } else {
-            UiLog "Version check failed: $ErrMsg" -Lvl Dim
-        }
-    }
-}
 
 # ── Main window XAML ──────────────────────────────────────
 [xml]$Xaml = @'
@@ -546,14 +393,6 @@ public static class Win32Sizing {
     public const int WMSZ_TOPLEFT = 4;
     public const int WMSZ_TOPRIGHT= 5;
 
-    [DllImport("user32.dll")]
-    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-    [DllImport("user32.dll")]
-    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
-        int X, int Y, int cx, int cy, uint uFlags);
-    public const uint SWP_NOZORDER   = 0x0004;
-    public const uint SWP_NOACTIVATE = 0x0010;
-
     public static void Enforce(IntPtr lParam, int edge, double ratio) {
         RECT r = (RECT)Marshal.PtrToStructure(lParam, typeof(RECT));
         int w = r.Right  - r.Left;
@@ -721,9 +560,10 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
     $Card.Margin          = [System.Windows.Thickness]::new(0,0,4,4)
     $Card.Padding         = [System.Windows.Thickness]::new(14,10,14,10)
 
-    # Inner grid — 3 rows for all cards; Elite adds a right column for timer+PID
+    # Inner grid; Elite has 2 rows + right column for PID, non-Elite has 3 rows
     $InnerGrid = [System.Windows.Controls.Grid]::new()
-    foreach ($h in @('Auto', 'Star', 'Auto')) {
+    $rowHeights = if ($isElite) { @('Auto', 'Star') } else { @('Auto', 'Star', 'Auto') }
+    foreach ($h in $rowHeights) {
         $rd = [System.Windows.Controls.RowDefinition]::new()
         $rd.Height = if ($h -eq 'Star') {
             [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
@@ -731,7 +571,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
         $InnerGrid.RowDefinitions.Add($rd)
     }
     if ($isElite) {
-        # Col 0 (*): label + status text  |  Col 1 (Auto): timer (top) + PID (bottom)
+        # Col 0 (*): label + status text  |  Col 1 (Auto): PID
         $cd0 = [System.Windows.Controls.ColumnDefinition]::new()
         $cd0.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
         $cd1 = [System.Windows.Controls.ColumnDefinition]::new()
@@ -880,14 +720,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
     $StateTB.Margin            = [System.Windows.Thickness]::new(0,4,0,2)
     [System.Windows.Controls.Grid]::SetRow($StateTB, 1)
     [System.Windows.Controls.Grid]::SetColumn($StateTB, 0)
-    if ($isElite) { [System.Windows.Controls.Grid]::SetRowSpan($StateTB, 2) }
     $InnerGrid.Children.Add($StateTB) | Out-Null
-
-    # Timer TextBlock (Elite: Col 1 Row 1 top-right; non-Elite: not added to grid)
-    $TimerTB = [System.Windows.Controls.TextBlock]::new()
-    $TimerTB.Text       = ''
-    $TimerTB.FontSize   = 11
-    $TimerTB.Foreground = Brush '#484850'
 
     # PID TextBlock
     $PidTB = [System.Windows.Controls.TextBlock]::new()
@@ -896,17 +729,10 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
     $PidTB.Foreground = Brush '#484850'
 
     if ($isElite) {
-        # Timer: Col 1, Row 1 — sits atop the PID on the right side of the Elite card
-        $TimerTB.HorizontalAlignment = 'Right'
-        $TimerTB.VerticalAlignment   = 'Bottom'
-        [System.Windows.Controls.Grid]::SetRow($TimerTB, 1)
-        [System.Windows.Controls.Grid]::SetColumn($TimerTB, 1)
-        $InnerGrid.Children.Add($TimerTB) | Out-Null
-
-        # PID: Col 1, Row 2 — below timer
+        # PID: Col 1, Row 1
         $PidTB.HorizontalAlignment = 'Right'
         $PidTB.VerticalAlignment   = 'Top'
-        [System.Windows.Controls.Grid]::SetRow($PidTB, 2)
+        [System.Windows.Controls.Grid]::SetRow($PidTB, 1)
         [System.Windows.Controls.Grid]::SetColumn($PidTB, 1)
         $InnerGrid.Children.Add($PidTB) | Out-Null
     } else {
@@ -917,18 +743,17 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
             [System.Windows.Controls.Grid]::SetRow($PidTB, 0)
             [System.Windows.Controls.Grid]::SetColumn($PidTB, 1)
         } else {
-            # PID: Row 1 — bottom-right for Steam/inactive (no Col 1)
+            # PID: Row 1 — bottom-right for Steam/inactive
             $PidTB.HorizontalAlignment = 'Right'
             $PidTB.VerticalAlignment   = 'Bottom'
             [System.Windows.Controls.Grid]::SetRow($PidTB, 1)
         }
         $InnerGrid.Children.Add($PidTB) | Out-Null
-        # TimerTB kept in row map for UiStatus ClearTimer compat but not shown
     }
 
     $Card.Child = $InnerGrid
     $StatusPanel.Children.Add($Card) | Out-Null
-    $script:StatusRows[$Key] = @{ Dot = $Dot; StateTB = $StateTB; TimerTB = $TimerTB; PidTB = $PidTB; CtrlBtn = $CtrlBtn }
+    $script:StatusRows[$Key] = @{ Dot = $Dot; StateTB = $StateTB; PidTB = $PidTB; CtrlBtn = $CtrlBtn }
 }
 
 function Rebuild-StatusRows {
@@ -943,36 +768,6 @@ function Rebuild-StatusRows {
     }
 }
 
-# ── Window position persistence ───────────────────────────
-function Save-WindowPositions {
-    $J = Get-Content $script:SettingsFile -Raw | ConvertFrom-Json
-    $savedCount = 0
-
-    # Save EDLS own window position
-    $J | Add-Member -NotePropertyName LauncherX      -NotePropertyValue ([int]$Window.Left)   -Force
-    $J | Add-Member -NotePropertyName LauncherY      -NotePropertyValue ([int]$Window.Top)    -Force
-    $J | Add-Member -NotePropertyName LauncherWidth  -NotePropertyValue ([int]$Window.Width)  -Force
-    $J | Add-Member -NotePropertyName LauncherHeight -NotePropertyValue ([int]$Window.Height) -Force
-
-    # Save companion app window positions
-    foreach ($Entry in $J.Apps) {
-        $proc = Get-Process -Name $Entry.Process -EA SilentlyContinue | Select-Object -First 1
-        if ($proc -and $proc.MainWindowHandle -ne [IntPtr]::Zero) {
-            $rect = New-Object Win32Sizing+RECT
-            if ([Win32Sizing]::GetWindowRect($proc.MainWindowHandle, [ref]$rect)) {
-                $Entry | Add-Member -NotePropertyName WindowX      -NotePropertyValue $rect.Left                  -Force
-                $Entry | Add-Member -NotePropertyName WindowY      -NotePropertyValue $rect.Top                   -Force
-                $Entry | Add-Member -NotePropertyName WindowWidth  -NotePropertyValue ($rect.Right  - $rect.Left) -Force
-                $Entry | Add-Member -NotePropertyName WindowHeight -NotePropertyValue ($rect.Bottom - $rect.Top)  -Force
-                $savedCount++
-            }
-        }
-        if ($proc) { try { $proc.Dispose() } catch {} }
-    }
-    $J | ConvertTo-Json -Depth 5 | Set-Content $script:SettingsFile -Encoding UTF8
-    Load-Settings
-    Write-UILog "Window positions saved (EDLS + $savedCount app(s))." -Level Success
-}
 
 # ── UI log writer (main thread) ───────────────────────────
 function Write-UILog { param($Message, [string]$Level = 'Info')
@@ -996,36 +791,12 @@ function Write-UILog { param($Message, [string]$Level = 'Info')
     }.GetNewClosure())
 }
 
-# ── Shared state (thread-safe) ────────────────────────────
-$SharedState = [hashtable]::Synchronized(@{ EliteStartTime = $null; AutoClose = $true; SavePos = $true })
-
-# ── Elapsed timer (UI thread) ─────────────────────────────
-$ElapsedTimer = [System.Windows.Threading.DispatcherTimer]::new()
-$ElapsedTimer.Interval = [TimeSpan]::FromSeconds(1)
-$script:ElapsedTickHandler = {
-    try {
-        $t = $SharedState['EliteStartTime']
-        if ($t) {
-            $elapsed = [DateTime]::Now - $t
-            $row = $script:StatusRows['Elite']
-            if ($row -and $row.TimerTB) {
-                $row.TimerTB.Text = '▸ {0:hh\:mm\:ss}' -f $elapsed
-            }
-        }
-    } catch {
-        # Swallow: a tick exception must never reach the WPF dispatcher unhandled.
-        Add-Content -Path $script:LogFile `
-            -Value "[$(Get-Date -Format 'HH:mm:ss')] [WARN] ElapsedTimer tick error: $_" `
-            -EA SilentlyContinue
-    }
-}
-$ElapsedTimer.Add_Tick($script:ElapsedTickHandler)
 
 # ── Background launch scriptblock ─────────────────────────
 # Variables injected via InitialSessionState:
 #   $Dispatcher, $LogFile, $EliteAppId,
 #   $Apps, $StatusRows, $LogDocument, $LogBox,
-#   $LaunchBtn, $ElapsedTimer, $SharedState
+#   $LaunchBtn, $Window, $BrushCache
 $LaunchScript = {
     Add-Type -AssemblyName PresentationFramework, PresentationCore
 
@@ -1061,10 +832,9 @@ $LaunchScript = {
     }
 
     function UiStatus { param([string]$Key, [string]$State,
-                              [string]$Color = '#C8860A', [bool]$ClearTimer = $false,
-                              [bool]$ClearPid = $false)
+                              [string]$Color = '#C8860A', [bool]$ClearPid = $false)
         $row = $StatusRows[$Key]; if (-not $row) { return }
-        $c = $Color; $s = $State; $ct = $ClearTimer; $cp = $ClearPid
+        $c = $Color; $s = $State; $cp = $ClearPid
         $isRunning = ($s -eq 'Online' -or $s -eq 'Launching…' -or $s -eq 'Running')
         if ($isRunning) {
             $btnBg = '#1A0D0D'; $btnFg = '#CC4444'; $btnBr = '#661122'; $btnTxt = 'STOP'
@@ -1075,7 +845,6 @@ $LaunchScript = {
             $row.Dot.Fill           = RsBrush $c
             $row.StateTB.Text       = $s
             $row.StateTB.Foreground = RsBrush $c
-            if ($ct) { $row.TimerTB.Text = '' }
             if ($cp -and $row.PidTB) { $row.PidTB.Text = '' }
             if ($row.CtrlBtn -and $row.CtrlBtn.IsEnabled) {
                 $row.CtrlBtn.Content     = $btnTxt
@@ -1154,9 +923,6 @@ $LaunchScript = {
     UiLog "Elite: Dangerous online. (PID: $($EP.Id))" -Lvl Success
     UiPid 'Elite' $EP.Id
 
-    $SharedState['EliteStartTime'] = [DateTime]::Now
-    $Dispatcher.Invoke([Action]{ $ElapsedTimer.Start() })
-
     try {
         # ── Launch tools ───────────────────────────────────────
         $Launched = @()
@@ -1180,22 +946,6 @@ $LaunchScript = {
                 UiStatus $App.Name 'Online' '#44CC44'
                 UiPid $App.Name $P.Id
                 UiLog "$($App.Name) online. (PID: $($P.Id))" -Lvl Success
-                if ($null -ne $App.WindowX) {
-                    $deadline = (Get-Date).AddSeconds(10)
-                    do {
-                        Start-Sleep -Milliseconds 300
-                        try { $P.Refresh() } catch {}
-                    } while ($P.MainWindowHandle -eq [IntPtr]::Zero -and (Get-Date) -lt $deadline)
-                    if ($P.MainWindowHandle -ne [IntPtr]::Zero) {
-                        [Win32Sizing]::SetWindowPos(
-                            $P.MainWindowHandle, [IntPtr]::Zero,
-                            $App.WindowX, $App.WindowY,
-                            $App.WindowWidth, $App.WindowHeight,
-                            ([Win32Sizing]::SWP_NOZORDER -bor [Win32Sizing]::SWP_NOACTIVATE)
-                        ) | Out-Null
-                        UiLog "$($App.Name) window positioned at ($($App.WindowX),$($App.WindowY))." -Lvl Dim
-                    }
-                }
                 try { $P.Dispose() } catch {}
             } catch {
                 UiLog "Failed to launch $($App.Name): $_" -Lvl Warning
@@ -1224,16 +974,8 @@ $LaunchScript = {
         if ($EP) { try { $EP.Dispose() } catch {}; $EP = $null }
 
         # ── Shutdown ───────────────────────────────────────────
-        UiStatus 'Elite' 'Offline' '#484850' -ClearTimer $true -ClearPid $true
+        UiStatus 'Elite' 'Offline' '#484850' -ClearPid $true
         UiLog 'Elite: Dangerous offline.'
-
-        if ($SharedState['SavePos']) {
-            try {
-                $Dispatcher.Invoke([Action]{ Save-WindowPositions })
-            } catch {
-                UiLog "Could not save window positions: $_" -Lvl Warning
-            }
-        }
 
         UiLog 'Closing third-party tools...'
 
@@ -1254,12 +996,6 @@ $LaunchScript = {
             -Value "=== Session ended $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" `
             -EA SilentlyContinue
 
-        if ($SharedState['AutoClose']) {
-            UiLog 'Closing launcher in 5 seconds...' -Lvl Dim
-            Start-Sleep -Seconds 5
-            $w = $Window
-            $Dispatcher.BeginInvoke([Action]{ $w.Close() }.GetNewClosure())
-        }
 
     } catch {
         $ErrMsg = $_.ToString()
@@ -1269,16 +1005,12 @@ $LaunchScript = {
             -EA SilentlyContinue
 
     } finally {
-        # Always stop the timer and re-enable the button — idempotent and safe to
-        # call twice on the normal path (stopped timer is a no-op in WPF).
         try {
             $Dispatcher.BeginInvoke([Action]{
-                $ElapsedTimer.Stop()
                 $LaunchBtn.IsEnabled = $true
                 $LaunchBtn.Content   = 'LAUNCH'
             }.GetNewClosure())
         } catch {}
-        $SharedState['EliteStartTime'] = $null
     }
 }
 
@@ -1301,9 +1033,6 @@ $LaunchBtn.Add_Click({
         @('LogDocument',        $LogDocument),
         @('LogBox',             $LogBox),
         @('LaunchBtn',          $LaunchBtn),
-        @('ElapsedTimer',       $ElapsedTimer),
-        @('SharedState',        $SharedState),
-        @('AutoClose',          $script:AutoClose),
         @('Window',             $Window),
         @('BrushCache',         $script:BrushCache)
     )) {
@@ -1335,9 +1064,6 @@ $LaunchBtn.Add_Click({
 
 # ── Cleanup on window close ───────────────────────────────
 $Window.Add_Closed({
-    $ElapsedTimer.Stop()
-    $ElapsedTimer.Remove_Tick($script:ElapsedTickHandler)
-    $script:ElapsedTickHandler = $null
     if ($script:LaunchPS) {
         try { $script:LaunchPS.Stop()    } catch {}
         try { $script:LaunchPS.Dispose() } catch {}
@@ -1345,14 +1071,6 @@ $Window.Add_Closed({
     if ($script:LaunchRS) {
         try { $script:LaunchRS.Close()   } catch {}
         try { $script:LaunchRS.Dispose() } catch {}
-    }
-    if ($script:VerCheckPS) {
-        try { $script:VerCheckPS.Stop()    } catch {}
-        try { $script:VerCheckPS.Dispose() } catch {}
-    }
-    if ($script:VerCheckRS) {
-        try { $script:VerCheckRS.Close()   } catch {}
-        try { $script:VerCheckRS.Dispose() } catch {}
     }
 })
 
@@ -1369,7 +1087,7 @@ $AutoStartBtn.Add_Click({
             $AutoStartBtn.Background  = Brush '#CC111114'
             $AutoStartBtn.BorderBrush = Brush '#2A2A35'
         }
-        Save-AutoStart $script:AutoStart
+        Set-SettingField 'AutoStart' $script:AutoStart
     } catch { Write-UILog "Auto-start save error: $_" -Level Warning }
 })
 
@@ -1406,14 +1124,6 @@ $ShutdownBtn.Add_Click({
             Write-UILog 'No tools running.' -Level Dim
         }
 
-        if ($script:AutoClose) {
-            Write-UILog 'Closing launcher in 5 seconds...' -Level Dim
-            $ct = [System.Windows.Threading.DispatcherTimer]::new()
-            $ct.Interval = [TimeSpan]::FromSeconds(5)
-            $t = $ct; $w = $Window
-            $ct.Add_Tick({ $t.Stop(); $w.Close() }.GetNewClosure())
-            $ct.Start()
-        }
     } catch {
         Write-UILog "Shutdown error: $_" -Level Error
     }
@@ -1558,7 +1268,7 @@ function Show-FirstTimeSetup {
     })
 
     $SetupDlg.FindName('SkipBtn').Add_Click({
-        Save-SetupComplete
+        Set-SettingField 'SetupComplete' $true
         Load-Settings
         Rebuild-StatusRows
         $SetupDlg.Close()
@@ -1603,8 +1313,6 @@ $SettingsBtn.Add_Click({
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="CMDR NAME"
@@ -1616,14 +1324,6 @@ $SettingsBtn.Add_Click({
         <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Name="ChkShowInactive"
                   Content="Show status cards for inactive programs"
                   Foreground="#C8860A" FontSize="11" Margin="0,8,0,2"/>
-
-        <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Name="ChkAutoClose"
-                  Content="Close launcher automatically after shutdown sequence (5s delay)"
-                  Foreground="#C8860A" FontSize="11" Margin="0,2,0,2"/>
-
-        <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Name="ChkSavePos"
-                  Content="Save companion app window positions on Elite exit"
-                  Foreground="#C8860A" FontSize="11" Margin="0,2,0,2"/>
 
       </Grid>
 
@@ -1681,8 +1381,6 @@ $SettingsBtn.Add_Click({
 
     $CmdrBox         = $Dlg.FindName('CmdrBox')
     $ChkShowInactive = $Dlg.FindName('ChkShowInactive')
-    $ChkAutoClose    = $Dlg.FindName('ChkAutoClose')
-    $ChkSavePos      = $Dlg.FindName('ChkSavePos')
     $AppsGrid        = $Dlg.FindName('AppsGrid')
     $AddAppBtn    = $Dlg.FindName('AddAppBtn')
     $RemoveAppBtn = $Dlg.FindName('RemoveAppBtn')
@@ -1691,8 +1389,6 @@ $SettingsBtn.Add_Click({
 
     $CmdrBox.Text                = $script:CmdrName
     $ChkShowInactive.IsChecked   = $script:ShowInactiveCards
-    $ChkAutoClose.IsChecked      = $script:AutoClose
-    $ChkSavePos.IsChecked        = $script:SavePos
 
     try {
         $RawJson  = Get-Content $script:SettingsFile -Raw -EA Stop |
@@ -1730,23 +1426,12 @@ $SettingsBtn.Add_Click({
 
     $SaveBtn.Add_Click({
         try {
-            $posMap = @{}
-            foreach ($rawApp in $RawJson.Apps) {
-                if ($rawApp.Name -and $null -ne $rawApp.WindowX) {
-                    $posMap[$rawApp.Name] = $rawApp
-                }
-            }
             $NewApps = @($AppsGrid.ItemsSource | ForEach-Object {
-                $p = $posMap[$_.Name]
                 [ordered]@{
-                    Name         = "$($_.Name)"
-                    Process      = "$($_.Process)"
-                    Path         = if ($_.Path) { "$($_.Path)" } else { $null }
-                    Enabled      = [bool]$_.Enabled
-                    WindowX      = if ($p) { [int]$p.WindowX }      else { $null }
-                    WindowY      = if ($p) { [int]$p.WindowY }      else { $null }
-                    WindowWidth  = if ($p) { [int]$p.WindowWidth }  else { $null }
-                    WindowHeight = if ($p) { [int]$p.WindowHeight } else { $null }
+                    Name    = "$($_.Name)"
+                    Process = "$($_.Process)"
+                    Path    = if ($_.Path) { "$($_.Path)" } else { $null }
+                    Enabled = [bool]$_.Enabled
                 }
             })
             # Track which default apps the user removed so Load-Settings won't re-add them.
@@ -1759,12 +1444,6 @@ $SettingsBtn.Add_Click({
                 SetupComplete     = $script:SetupComplete
                 AutoStart         = $script:AutoStart
                 ShowInactiveCards = [bool]$ChkShowInactive.IsChecked
-                AutoClose         = [bool]$ChkAutoClose.IsChecked
-                SavePos           = [bool]$ChkSavePos.IsChecked
-                LauncherX         = $script:LauncherX
-                LauncherY         = $script:LauncherY
-                LauncherWidth     = $script:LauncherWidth
-                LauncherHeight    = $script:LauncherHeight
                 Apps              = $NewApps
                 RemovedDefaults   = $mergedRemoved
             } | ConvertTo-Json -Depth 5 |
@@ -1811,14 +1490,6 @@ if ($script:AutoStart) {
 
 # Auto-trigger launch once window is fully rendered
 $Window.Add_Loaded({
-    # Restore saved EDLS window position
-    if ($null -ne $script:LauncherX) {
-        $Window.Left   = $script:LauncherX
-        $Window.Top    = $script:LauncherY
-        $Window.Width  = $script:LauncherWidth
-        $Window.Height = $script:LauncherHeight
-    }
-
     # Show first-time setup dialog for new installs
     if (-not $script:SetupComplete) {
         Show-FirstTimeSetup
@@ -1838,27 +1509,6 @@ $Window.Add_Loaded({
         })
     }
 
-    # Background self-version check on startup
-    $ISS_ver = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
-    foreach ($Pair in @(
-        @('Dispatcher',  $Dispatcher),
-        @('LogFile',     $script:LogFile),
-        @('LogDocument', $LogDocument),
-        @('LogBox',      $LogBox),
-        @('AppVersion',  $script:AppVersion),
-        @('RepoRoot',    $_appDir),
-        @('BrushCache',  $script:BrushCache)
-    )) {
-        $ISS_ver.Variables.Add(
-            [System.Management.Automation.Runspaces.SessionStateVariableEntry]::new(
-                $Pair[0], $Pair[1], ''))
-    }
-    $script:VerCheckRS = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace($ISS_ver)
-    $script:VerCheckRS.Open()
-    $script:VerCheckPS = [System.Management.Automation.PowerShell]::Create()
-    $script:VerCheckPS.Runspace = $script:VerCheckRS
-    $script:VerCheckPS.AddScript($SelfVersionScript) | Out-Null
-    $script:VerCheckPS.BeginInvoke() | Out-Null
 })
 
 Write-UILog 'Elite: Dangerous Launch Suite ready.' -Level Success
