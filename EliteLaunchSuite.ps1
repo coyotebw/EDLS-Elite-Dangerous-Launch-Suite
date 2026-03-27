@@ -793,7 +793,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
         $CtrlBtn.FontWeight      = [System.Windows.FontWeights]::Bold
         $CtrlBtn.BorderThickness = [System.Windows.Thickness]::new(1)
         $CtrlBtn.Cursor          = [System.Windows.Input.Cursors]::Hand
-        $CtrlBtn.VerticalAlignment   = 'Center'
+        $CtrlBtn.VerticalAlignment   = 'Bottom'
         $CtrlBtn.HorizontalAlignment = 'Right'
         $CtrlBtn.Content     = 'START'
         $CtrlBtn.Background  = Brush '#0D1A0D'
@@ -864,7 +864,7 @@ function New-StatusRow { param([string]$Key, [string]$Label, [bool]$IsInactive =
             }
         })
 
-        [System.Windows.Controls.Grid]::SetRow($CtrlBtn, 0)
+        [System.Windows.Controls.Grid]::SetRow($CtrlBtn, 1)
         [System.Windows.Controls.Grid]::SetColumn($CtrlBtn, 1)
         $InnerGrid.Children.Add($CtrlBtn) | Out-Null
     }
