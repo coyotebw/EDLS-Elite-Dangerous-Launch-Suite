@@ -23,7 +23,7 @@ if ([System.Threading.Thread]::CurrentThread.ApartmentState -ne 'STA') {
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
 # ── Paths ─────────────────────────────────────────────────
-$DataDir             = Join-Path $env:LOCALAPPDATA 'EDLaunchSuite'
+$DataDir             = Join-Path $env:LOCALAPPDATA 'EDLS'
 $script:LogFile      = Join-Path $DataDir 'launcher.log'
 $script:SettingsFile = Join-Path $DataDir 'settings.json'
 New-Item -ItemType Directory -Path $DataDir -Force | Out-Null
@@ -323,7 +323,7 @@ function Format-CmdrLine { param([string]$Name)
         <!-- Left: author credit + version + issue link -->
         <StackPanel Grid.Column="0" VerticalAlignment="Center" TextElement.FontFamily="Consolas">
           <TextBlock Foreground="#484850" FontSize="11" FontStyle="Italic"
-                     Text="by CMDR Coyote Bongwater and (mostly) Claude"/>
+                     Text="by CMDR Coyote Bongwater"/>
           <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
             <TextBlock Name="VersionLabel" Foreground="#3A3A45" FontSize="12"/>
             <TextBlock Foreground="#3A3A45" FontSize="12" Margin="10,0,0,0">
@@ -1135,7 +1135,7 @@ function Show-FirstTimeSetup {
 <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Launch Suite — First-Time Setup"
+    Title="EDLS — First-Time Setup"
     Background="#080808" FontFamily="Consolas"
     Width="480" Height="620"
     ResizeMode="NoResize"
@@ -1152,12 +1152,12 @@ function Show-FirstTimeSetup {
       </Grid.RowDefinitions>
 
       <!-- Heading -->
-      <TextBlock Grid.Row="0" Text="Welcome to Elite: Dangerous Launch Suite"
-                 Foreground="#FFB700" FontSize="15" FontWeight="Bold"
+      <TextBlock Grid.Row="0" Text="Welcome to EDLS, CMDR"
+                 Foreground="#FFB700" FontSize="18" FontWeight="Bold"
                  Margin="0,0,0,10"/>
 
       <!-- Description -->
-      <TextBlock Grid.Row="1" Text="Select which companion apps to enable on launch."
+      <TextBlock Grid.Row="1" Text="Select which companion apps to enable on launch. You can remove defaults &amp; add your own at any time in settings. &#x0a;&#x0a;Please report any crashes/bugs using the 'report issue' button in the bottom left. Thanks for downloading EDLS! o7"
                  Foreground="#C8860A" FontSize="11" TextWrapping="Wrap"
                  Margin="0,0,0,18"/>
 
@@ -1199,7 +1199,7 @@ function Show-FirstTimeSetup {
                 BorderBrush="#2A2A35" BorderThickness="1"
                 FontFamily="Consolas" FontSize="12"
                 Cursor="Hand"/>
-        <Button Name="CompleteBtn" Content="COMPLETE"
+        <Button Name="CompleteBtn" Content="CONFIRM"
                 Height="34" Width="120" Margin="0,0,0,0"
                 Background="#140F00" Foreground="#FFB700"
                 BorderBrush="#C8860A" BorderThickness="1"

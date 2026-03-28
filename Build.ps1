@@ -49,7 +49,7 @@ try {
     }
 
     Write-Host ""
-    Write-Host "=== EDLaunchSuite Build ===" -ForegroundColor Cyan
+    Write-Host "=== EDLS Build ===" -ForegroundColor Cyan
     Write-Host "Source : $SourcePs1"
     Write-Host "Output : $OutputExe"
     Write-Host "Version: $BuildVersion"
@@ -88,7 +88,7 @@ try {
             Write-Host ""
 
             # Clear app data so the fresh build starts with clean defaults
-            $AppDataDir = Join-Path $env:LOCALAPPDATA 'EDLaunchSuite'
+            $AppDataDir = Join-Path $env:LOCALAPPDATA 'EDLS'
             if (Test-Path $AppDataDir) {
                 Remove-Item (Join-Path $AppDataDir 'settings.json') -Force -EA SilentlyContinue
                 Remove-Item (Join-Path $AppDataDir 'launcher.log')  -Force -EA SilentlyContinue
