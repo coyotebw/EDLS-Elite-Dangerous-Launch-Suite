@@ -3,7 +3,7 @@
 # |||||||| by CMDR Coyote Bongwater (and Claude)  ||||||||||
 # ==========================================================
 
-$script:AppVersion = '0.9.0'
+$script:AppVersion = '0.9.5'
 
 # ── 64-bit bootstrap ──────────────────────────────────────
 if (-not [Environment]::Is64BitProcess) {
