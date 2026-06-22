@@ -867,8 +867,11 @@ $LaunchScript = {
             -Value "=== Session ended $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" `
             -EA SilentlyContinue
         $Dispatcher.Invoke([Action]{
-            $LaunchBtn.IsEnabled = $true
-            $LaunchBtn.Content   = 'LAUNCH'
+            $LaunchBtn.IsEnabled   = $true
+            $LaunchBtn.Content     = 'LAUNCH'
+            $LaunchBtn.Background  = RsBrush '#CC140F00'
+            $LaunchBtn.Foreground  = RsBrush '#FFB700'
+            $LaunchBtn.BorderBrush = RsBrush '#C8860A'
         })
     }
 
@@ -1007,8 +1010,11 @@ $LaunchScript = {
     } finally {
         try {
             $Dispatcher.BeginInvoke([Action]{
-                $LaunchBtn.IsEnabled = $true
-                $LaunchBtn.Content   = 'LAUNCH'
+                $LaunchBtn.IsEnabled   = $true
+                $LaunchBtn.Content     = 'LAUNCH'
+                $LaunchBtn.Background  = RsBrush '#CC140F00'
+                $LaunchBtn.Foreground  = RsBrush '#FFB700'
+                $LaunchBtn.BorderBrush = RsBrush '#C8860A'
             }.GetNewClosure())
         } catch {}
     }
